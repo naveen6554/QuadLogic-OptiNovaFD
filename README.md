@@ -1,1 +1,0 @@
-# QuadLogic-OptiNovaFD

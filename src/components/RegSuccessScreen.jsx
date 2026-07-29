@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { CheckCircle2, ShoppingBag, Sparkles, ArrowRight } from 'lucide-react';
+import { CheckCircle2, LogIn, Sparkles, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 
 export const RegSuccessScreen = () => {
-  const { navigateTo, currentUser } = useAuth();
+  const { navigateTo, otpContext } = useAuth();
 
   useEffect(() => {
     // Trigger celebration confetti
@@ -36,16 +36,16 @@ export const RegSuccessScreen = () => {
       </h1>
 
       <p className="welcome-subtitle" style={{ marginBottom: '2rem' }}>
-        Your account <strong>{currentUser?.email || 'member'}</strong> has been created and verified. You are now eligible for exclusive VIP optics benefits.
+        Your account <strong>{otpContext.target || otpContext.draftData?.email || 'member'}</strong> has been created and verified. Please log in to continue.
       </p>
 
       <button 
         className="btn-primary" 
-        onClick={() => navigateTo('dashboard')}
-        id="continue-shopping-btn"
+        onClick={() => navigateTo('login')}
+        id="proceed-login-btn"
       >
-        <ShoppingBag size={18} />
-        CONTINUE SHOPPING
+        <LogIn size={18} />
+        PROCEED TO LOGIN
         <ArrowRight size={16} />
       </button>
     </div>

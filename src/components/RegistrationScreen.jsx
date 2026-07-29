@@ -427,7 +427,6 @@ export const RegistrationScreen = ({ onOpenTerms }) => {
             <label className="terms-checkbox-container" htmlFor="reg-terms">
               <div 
                 className={`custom-checkbox ${formData.acceptTerms ? 'checked' : ''}`}
-                onClick={() => setFormData({ ...formData, acceptTerms: !formData.acceptTerms })}
               >
                 {formData.acceptTerms && <Check size={14} strokeWidth={3} />}
               </div>
@@ -440,7 +439,7 @@ export const RegistrationScreen = ({ onOpenTerms }) => {
               />
               <div>
                 I accept OptiNova's{' '}
-                <span className="text-link" onClick={(e) => { e.preventDefault(); onOpenTerms(); }}>
+                <span className="text-link" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenTerms(); }}>
                   Terms of Service & Privacy Policy
                 </span>
               </div>

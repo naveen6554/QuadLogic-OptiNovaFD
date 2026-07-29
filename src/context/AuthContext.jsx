@@ -76,16 +76,7 @@ export const AuthProvider = ({ children }) => {
   // Verify OTP Success
   const handleVerifyOtpSuccess = () => {
     if (otpContext.mode === 'register') {
-      const newUser = {
-        firstName: otpContext.draftData?.firstName || 'Valued',
-        lastName: otpContext.draftData?.lastName || 'Customer',
-        username: otpContext.draftData?.username || 'optinova_member',
-        email: otpContext.draftData?.email || 'user@optinova.com',
-        phone: otpContext.draftData?.mobile || '+1 555-0199',
-        tier: 'Gold Member'
-      };
-      setCurrentUser(newUser);
-      addToast('Mobile/Email verified successfully!', 'success');
+      addToast('Account registered successfully! Please log in.', 'success');
       navigateTo('reg_success');
     } else if (otpContext.mode === 'forgot_password') {
       addToast('Identity verified. Please set a new password.', 'success');
