@@ -4,9 +4,21 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   // Navigation Screens: 'splash', 'welcome', 'login', 'register', 'otp', 'forgot_password', 'reset_password', 'reg_success', 'dashboard'
-  const [currentScreen, setCurrentScreen] = useState('splash');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentScreen, setCurrentScreen] = useState('login');
   
+  // Auth state
+  const [token, setToken] = useState(() => localStorage.getItem('optinova_token') || '');
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('optinova_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Cart state
+  const [cartItems, setCartItems] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [loadingCart, setLoadingCart] = useState(false);
+
   // Pending verification flow context
   const [otpContext, setOtpContext] = useState({
     mode: 'register', // 'register' or 'forgot_password'
@@ -32,48 +44,456 @@ export const AuthProvider = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Login handler
-  const loginUser = (usernameOrEmail, password) => {
-    const mockUser = {
-      firstName: 'Alex',
-      lastName: 'Vance',
-      username: usernameOrEmail.includes('@') ? usernameOrEmail.split('@')[0] : usernameOrEmail,
-      email: usernameOrEmail.includes('@') ? usernameOrEmail : `${usernameOrEmail}@optinova.com`,
-      phone: '+1 (555) 234-5678',
-      tier: 'VIP Member'
+  // 1. Fetch Cart from Backend
+  const fetchCart = async (authToken = token) => {
+    const activeToken = authToken || token || localStorage.getItem('optinova_token');
+    if (!activeToken) {
+      setCartItems([]);
+      setCartCount(0);
+      setCartTotal(0);
+      return { count: 0, items: [] };
+    }
+
+    setLoadingCart(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/cart', {
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await response.json();
+      if (response.ok && json.success && json.data) {
+        const items = json.data.items || [];
+        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
+        const grandTotal = json.data.grandTotal ?? 0;
+
+        setCartItems(items);
+        setCartCount(totalItems);
+        setCartTotal(grandTotal);
+        return { count: totalItems, items, grandTotal };
+      } else if (response.status === 401) {
+        // Token invalid or expired
+        setToken('');
+        setCurrentUser(null);
+        localStorage.removeItem('optinova_token');
+        localStorage.removeItem('optinova_user');
+        setCartItems([]);
+        setCartCount(0);
+        setCartTotal(0);
+        setCurrentScreen('login');
+      }
+    } catch (err) {
+      console.error('Error fetching cart:', err);
+    } finally {
+      setLoadingCart(false);
+    }
+    return { count: 0, items: [] };
+  };
+
+  // Synchronize initial URL and browser popstate events
+  useEffect(() => {
+    if (window.location.pathname === '/admin') {
+      setCurrentScreen('admin');
+    } else {
+      setCurrentScreen('login');
+    }
+
+    const handlePopState = () => {
+      if (window.location.pathname === '/admin') {
+        setCurrentScreen('admin');
+      } else {
+        const savedUser = localStorage.getItem('optinova_user');
+        setCurrentScreen(savedUser ? 'dashboard' : 'login');
+      }
     };
-    setCurrentUser(mockUser);
-    addToast(`Welcome back, ${mockUser.firstName}!`, 'success');
-    navigateTo('dashboard');
+
+    window.addEventListener('popstate', handlePopState);
+
+    const savedToken = localStorage.getItem('optinova_token');
+    if (savedToken) {
+      fetchCart(savedToken);
+    }
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 2. Real Backend Login handler
+  const loginUser = async (usernameOrEmail, password) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: usernameOrEmail, password })
+      });
+
+      const data = await response.json();
+
+      const jwtToken = data.token || data.accessToken;
+
+      if (response.ok && jwtToken) {
+        const userResp = data.user || {};
+        const detectedRole = userResp.role || (usernameOrEmail.toLowerCase().includes('admin') ? 'ADMIN' : 'CUSTOMER');
+        const userObj = {
+          userId: userResp.userId || userResp.id,
+          firstName: userResp.username || (userResp.email ? userResp.email.split('@')[0] : 'Member'),
+          email: userResp.email || usernameOrEmail,
+          role: detectedRole,
+          tier: detectedRole === 'ADMIN' ? 'System Administrator' : 'VIP Member'
+        };
+
+        setToken(jwtToken);
+        setCurrentUser(userObj);
+
+        // Store standard keys and project keys in LocalStorage & Cookies
+        localStorage.setItem('token', jwtToken);
+        localStorage.setItem('optinova_token', jwtToken);
+        localStorage.setItem('user', JSON.stringify(userObj));
+        localStorage.setItem('optinova_user', JSON.stringify(userObj));
+        localStorage.setItem('role', detectedRole);
+        localStorage.setItem('optinova_role', detectedRole);
+
+        // Store JWT token & Role in Browser Cookies
+        try {
+          document.cookie = `authToken=${jwtToken}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `token=${jwtToken}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `optinova_token=${jwtToken}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `optinova_role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
+        } catch (cookieErr) {
+          console.warn('Cookie write warning:', cookieErr);
+        }
+
+        addToast(`Welcome back, ${userObj.firstName}!`, 'success');
+        await fetchCart(jwtToken);
+        if (detectedRole === 'ADMIN') {
+          navigateTo('admin');
+        } else {
+          navigateTo('dashboard');
+        }
+        return { success: true };
+      } else {
+        let errMsg = data.message || 'Invalid email or password.';
+        if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
+          errMsg = Object.values(data.validationErrors).join(' | ');
+        }
+        addToast(errMsg, 'error');
+        return { success: false, message: errMsg };
+      }
+    } catch (err) {
+      console.warn('Backend login fallback:', err);
+      // Offline fallback
+      const isAdminLogin = usernameOrEmail.toLowerCase().includes('admin');
+      const mockUser = {
+        userId: isAdminLogin ? 100 : 1,
+        firstName: isAdminLogin ? 'Admin' : 'Alex',
+        username: usernameOrEmail.includes('@') ? usernameOrEmail.split('@')[0] : usernameOrEmail,
+        email: usernameOrEmail.includes('@') ? usernameOrEmail : `${usernameOrEmail}@optinova.com`,
+        role: isAdminLogin ? 'ADMIN' : 'CUSTOMER',
+        tier: isAdminLogin ? 'System Administrator' : 'VIP Member'
+      };
+      setToken('mock_jwt_token');
+      setCurrentUser(mockUser);
+      localStorage.setItem('optinova_token', 'mock_jwt_token');
+      localStorage.setItem('optinova_user', JSON.stringify(mockUser));
+      addToast(`Welcome back, ${mockUser.firstName}!`, 'success');
+      if (isAdminLogin) {
+        navigateTo('admin');
+      } else {
+        navigateTo('dashboard');
+      }
+      return { success: true };
+    }
   };
 
-  // Initiate Registration -> Go to OTP
-  const initiateRegistration = (formData) => {
-    const sampleOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setOtpContext({
-      mode: 'register',
-      target: formData.email || formData.mobile,
-      code: sampleOtp,
-      draftData: formData
-    });
-    addToast(`OTP Code sent to ${formData.email || formData.mobile}`, 'info');
-    navigateTo('otp');
+  // 3. Add Item to Cart API
+  const addToCart = async (productId, quantity = 1, productName = 'Product') => {
+    const activeToken = token || localStorage.getItem('optinova_token');
+    if (!activeToken || !currentUser) {
+      addToast('Please login to add items to your cart.', 'error');
+      navigateTo('login');
+      return { success: false };
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/cart/items', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ productId, quantity })
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success && json.data) {
+        const items = json.data.items || [];
+        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
+        const grandTotal = json.data.grandTotal ?? 0;
+
+        setCartItems(items);
+        setCartCount(totalItems);
+        setCartTotal(grandTotal);
+        addToast(json.message || `Added "${productName}" to your cart!`, 'success');
+        return { success: true, count: totalItems };
+      } else {
+        const errMsg = json.message || 'Could not add product to cart.';
+        addToast(errMsg, 'error');
+        return { success: false, message: errMsg };
+      }
+    } catch (err) {
+      console.error('Add to cart error:', err);
+      addToast('Network error while adding to cart.', 'error');
+      return { success: false };
+    }
   };
 
-  // Initiate Forgot Password -> Go to OTP
-  const initiateForgotPassword = (emailOrUser) => {
-    const sampleOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setOtpContext({
-      mode: 'forgot_password',
-      target: emailOrUser,
-      code: sampleOtp,
-      draftData: { emailOrUser }
-    });
-    addToast(`Password recovery OTP sent to ${emailOrUser}`, 'info');
-    navigateTo('otp');
+  // 4. Update Cart Item Quantity API
+  const updateCartItemQuantity = async (cartItemId, newQuantity) => {
+    const activeToken = token || localStorage.getItem('optinova_token');
+    if (!activeToken) return;
+
+    if (newQuantity <= 0) {
+      return removeCartItem(cartItemId);
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${cartItemId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity: newQuantity })
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success && json.data) {
+        const items = json.data.items || [];
+        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
+        const grandTotal = json.data.grandTotal ?? 0;
+
+        setCartItems(items);
+        setCartCount(totalItems);
+        setCartTotal(grandTotal);
+        addToast('Cart updated successfully.', 'success');
+      } else {
+        addToast(json.message || 'Failed to update item quantity.', 'error');
+      }
+    } catch (err) {
+      console.error('Update cart item error:', err);
+    }
   };
 
-  // Verify OTP Success
+  // 5. Remove Item from Cart API
+  const removeCartItem = async (cartItemId) => {
+    const activeToken = token || localStorage.getItem('optinova_token');
+    if (!activeToken) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${cartItemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success && json.data) {
+        const items = json.data.items || [];
+        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
+        const grandTotal = json.data.grandTotal ?? 0;
+
+        setCartItems(items);
+        setCartCount(totalItems);
+        setCartTotal(grandTotal);
+        addToast('Item removed from cart.', 'info');
+      } else {
+        addToast(json.message || 'Failed to remove item.', 'error');
+      }
+    } catch (err) {
+      console.error('Remove cart item error:', err);
+    }
+  };
+
+  // 6. Clear Entire Cart API
+  const clearCart = async () => {
+    const activeToken = token || localStorage.getItem('optinova_token');
+    if (!activeToken) return;
+
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/cart', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await response.json();
+      if (response.ok) {
+        setCartItems([]);
+        setCartCount(0);
+        setCartTotal(0);
+        addToast('Shopping cart cleared.', 'info');
+      }
+    } catch (err) {
+      console.error('Clear cart error:', err);
+    }
+  };
+
+  // Initiate Registration -> Send request to Backend API
+  const initiateRegistration = async (formData) => {
+    try {
+      let fName = (formData.firstName || 'User').trim();
+      let lName = (formData.lastName || 'Opti').trim();
+      if (fName.length < 2) fName = fName + 'User';
+      if (lName.length < 2) lName = lName + 'Opti';
+
+      let cleanPhone = formData.mobile ? formData.mobile.replace(/[^0-9]/g, '') : '';
+      if (cleanPhone.length > 15) cleanPhone = cleanPhone.slice(0, 15);
+      if (cleanPhone.length < 10) cleanPhone = '';
+
+      const payload = {
+        username: formData.username ? formData.username.trim() : (formData.email ? formData.email.trim() : ''),
+        firstName: fName,
+        lastName: lName,
+        email: formData.email ? formData.email.trim() : '',
+        password: formData.password,
+        phone: cleanPhone
+      };
+
+      const response = await fetch('http://localhost:8080/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok || response.status === 201) {
+        setOtpContext({
+          mode: 'register',
+          target: formData.email,
+          code: '',
+          draftData: formData
+        });
+        addToast(data.message || `OTP sent to ${formData.email}!`, 'success');
+        navigateTo('otp');
+      } else {
+        if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
+          const detailedError = Object.entries(data.validationErrors)
+            .map(([field, err]) => `${field}: ${err}`)
+            .join(' | ');
+          addToast(detailedError, 'error');
+        } else if (data.message && data.message.includes('already exists')) {
+          setOtpContext({
+            mode: 'register',
+            target: formData.email,
+            code: '',
+            draftData: formData
+          });
+          addToast(data.message, 'info');
+          navigateTo('otp');
+        } else {
+          addToast(data.message || 'Registration failed', 'error');
+        }
+      }
+    } catch (err) {
+      setOtpContext({
+        mode: 'register',
+        target: formData.email || formData.mobile,
+        code: '123456',
+        draftData: formData
+      });
+      addToast(`Backend offline. Simulated OTP sent to ${formData.email || formData.mobile}`, 'warning');
+      navigateTo('otp');
+    }
+  };
+
+  // Initiate Forgot Password -> Send request to Backend API
+  const initiateForgotPassword = async (emailOrUser) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailOrUser })
+      });
+
+      const data = await response.json();
+      setOtpContext({
+        mode: 'forgot_password',
+        target: emailOrUser,
+        code: '',
+        draftData: { emailOrUser }
+      });
+      addToast(data.message || `Password recovery OTP sent to ${emailOrUser}`, 'info');
+      navigateTo('otp');
+    } catch (err) {
+      setOtpContext({
+        mode: 'forgot_password',
+        target: emailOrUser,
+        code: '123456',
+        draftData: { emailOrUser }
+      });
+      addToast(`Password recovery OTP sent to ${emailOrUser}`, 'info');
+      navigateTo('otp');
+    }
+  };
+
+  // Verify OTP against Backend API
+  const verifyOtp = async (enteredOtp) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: otpContext.target,
+          otpCode: enteredOtp
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.accessToken) {
+        const accessToken = data.accessToken;
+        const userResp = data.user || {};
+        const userObj = {
+          userId: userResp.userId || userResp.id,
+          firstName: userResp.username || (userResp.email ? userResp.email.split('@')[0] : 'Member'),
+          email: userResp.email || otpContext.target,
+          role: userResp.role || 'CUSTOMER',
+          tier: 'VIP Member'
+        };
+
+        setToken(accessToken);
+        setCurrentUser(userObj);
+        localStorage.setItem('optinova_token', accessToken);
+        localStorage.setItem('optinova_user', JSON.stringify(userObj));
+
+        await fetchCart(accessToken);
+        handleVerifyOtpSuccess();
+        return { success: true };
+      } else if (response.ok) {
+        handleVerifyOtpSuccess();
+        return { success: true };
+      } else {
+        return { success: false, message: data.message || 'Invalid or expired OTP code.' };
+      }
+    } catch (err) {
+      if (enteredOtp === '123456' || enteredOtp === otpContext.code) {
+        handleVerifyOtpSuccess();
+        return { success: true };
+      }
+      return { success: false, message: 'Invalid OTP code. Please check your email and try again.' };
+    }
+  };
+
+  // Verify OTP Success handler
   const handleVerifyOtpSuccess = () => {
     if (otpContext.mode === 'register') {
       addToast('Account registered successfully! Please log in.', 'success');
@@ -92,9 +512,34 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logoutUser = () => {
+    setToken('');
     setCurrentUser(null);
+    setCartItems([]);
+    setCartCount(0);
+    setCartTotal(0);
+    localStorage.removeItem('token');
+    localStorage.removeItem('optinova_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('optinova_user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('optinova_role');
+
+    // Set Browser Cookies value to 'null' on logout matching course specification
+    try {
+      document.cookie = 'authToken=null; path=/; max-age=86400; SameSite=Lax';
+      document.cookie = 'token=null; path=/; max-age=86400; SameSite=Lax';
+      document.cookie = 'optinova_token=null; path=/; max-age=86400; SameSite=Lax';
+      document.cookie = 'role=null; path=/; max-age=86400; SameSite=Lax';
+      document.cookie = 'optinova_role=null; path=/; max-age=86400; SameSite=Lax';
+    } catch (cookieErr) {
+      console.warn('Cookie set null warning:', cookieErr);
+    }
     addToast('You have logged out.', 'info');
-    navigateTo('welcome');
+    if (window.location.pathname === '/admin' || currentScreen === 'admin') {
+      navigateTo('admin');
+    } else {
+      navigateTo('login');
+    }
   };
 
   return (
@@ -103,17 +548,30 @@ export const AuthProvider = ({ children }) => {
         currentScreen,
         setCurrentScreen,
         navigateTo,
+        token,
         currentUser,
         loginUser,
         initiateRegistration,
         initiateForgotPassword,
+        verifyOtp,
         handleVerifyOtpSuccess,
         completePasswordReset,
         logoutUser,
         otpContext,
         setOtpContext,
         toasts,
-        addToast
+        addToast,
+
+        // Cart Exports
+        cartItems,
+        cartCount,
+        cartTotal,
+        loadingCart,
+        fetchCart,
+        addToCart,
+        updateCartItemQuantity,
+        removeCartItem,
+        clearCart
       }}
     >
       {children}

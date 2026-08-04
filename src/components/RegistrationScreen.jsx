@@ -131,7 +131,7 @@ export const RegistrationScreen = ({ onOpenTerms }) => {
   return (
     <div className="glass-card glass-card-wide">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <button onClick={() => navigateTo('welcome')} className="close-btn" title="Back">
+        <button onClick={() => navigateTo('login')} className="close-btn" title="Back to Login">
           <ArrowLeft size={20} />
         </button>
         <button 

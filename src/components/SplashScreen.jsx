@@ -15,7 +15,7 @@ export const SplashScreen = () => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
-          setTimeout(() => navigateTo('welcome'), 200);
+          setTimeout(() => navigateTo('login'), 200);
           return 100;
         }
         return prev + increment;
@@ -49,7 +49,7 @@ export const SplashScreen = () => {
 
       <button 
         className="splash-skip-btn"
-        onClick={() => navigateTo('welcome')}
+        onClick={() => navigateTo('login')}
       >
         Skip intro
       </button>

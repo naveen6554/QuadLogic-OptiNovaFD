@@ -3,13 +3,14 @@ import { ShieldCheck, ArrowLeft, RefreshCw, KeyRound, AlertCircle } from 'lucide
 import { useAuth } from '../context/AuthContext';
 
 export const OTPVerificationScreen = () => {
-  const { navigateTo, otpContext, handleVerifyOtpSuccess, addToast } = useAuth();
+  const { navigateTo, otpContext, verifyOtp, initiateRegistration, initiateForgotPassword, addToast } = useAuth();
   
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+  const [isVerifying, setIsVerifying] = useState(false);
+
   const inputRefs = useRef([]);
 
   // Countdown timer for Resend OTP (30 sec)
@@ -33,15 +34,13 @@ export const OTPVerificationScreen = () => {
   }, []);
 
   const handleChange = (index, value) => {
-    // Only accept numeric digit
     if (value && !/^\d+$/.test(value)) return;
 
     const newOtp = [...otpDigits];
-    newOtp[index] = value.slice(-1); // Take single digit
+    newOtp[index] = value.slice(-1);
     setOtpDigits(newOtp);
     setErrorMsg('');
 
-    // Auto-advance
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
     }
@@ -64,16 +63,23 @@ export const OTPVerificationScreen = () => {
     }
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (!canResend) return;
     setTimer(30);
     setCanResend(false);
     setOtpDigits(['', '', '', '', '', '']);
     setErrorMsg('');
-    addToast(`New OTP sent to ${otpContext.target || 'your mobile/email'}!`, 'info');
+
+    if (otpContext.draftData && otpContext.mode === 'register') {
+      await initiateRegistration(otpContext.draftData);
+    } else if (otpContext.target && otpContext.mode === 'forgot_password') {
+      await initiateForgotPassword(otpContext.target);
+    } else {
+      addToast(`New OTP email requested for ${otpContext.target}!`, 'info');
+    }
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
     const enteredOtp = otpDigits.join('');
     if (enteredOtp.length < 6) {
@@ -81,18 +87,13 @@ export const OTPVerificationScreen = () => {
       return;
     }
 
-    // Verify against expected code (or allow 123456 as universal test code)
-    if (enteredOtp === otpContext.code || enteredOtp === '123456') {
-      handleVerifyOtpSuccess();
-    } else {
-      setErrorMsg(`Invalid OTP code! Hint: Use code ${otpContext.code || '123456'}`);
-    }
-  };
+    setIsVerifying(true);
+    const result = await verifyOtp(enteredOtp);
+    setIsVerifying(false);
 
-  const handleAutoFillOtp = () => {
-    const code = otpContext.code || '123456';
-    setOtpDigits(code.split(''));
-    setErrorMsg('');
+    if (!result.success) {
+      setErrorMsg(result.message || 'Invalid OTP code. Please check your email and try again.');
+    }
   };
 
   return (
@@ -161,16 +162,11 @@ export const OTPVerificationScreen = () => {
           )}
         </div>
 
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" disabled={isVerifying}>
           <ShieldCheck size={18} />
-          VERIFY OTP
+          {isVerifying ? 'VERIFYING...' : 'VERIFY OTP'}
         </button>
       </form>
-
-      {/* Simulated OTP Hint for testing convenience */}
-      <div className="simulated-otp-hint" onClick={handleAutoFillOtp} style={{ cursor: 'pointer' }}>
-        <span>Test OTP Code: <strong>{otpContext.code || '123456'}</strong> (Click to auto fill)</span>
-      </div>
     </div>
   );
 };

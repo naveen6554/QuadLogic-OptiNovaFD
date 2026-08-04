@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, Zap } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, Zap, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const LoginScreen = () => {
@@ -36,7 +36,7 @@ export const LoginScreen = () => {
 
   const handleQuickFillDemo = () => {
     setFormData({
-      username: 'alex_optinova',
+      username: 'alex@optinova.com',
       password: 'OptiPassword123'
     });
     setErrors({});

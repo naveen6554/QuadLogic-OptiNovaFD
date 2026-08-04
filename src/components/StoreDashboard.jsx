@@ -1,94 +1,131 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Glasses, ShoppingBag, Search, Filter, Sparkles, LogOut, 
-  User, Check, Eye, Star, ShieldCheck, Camera
+  Glasses, ShoppingBag, Search, Sparkles, Star, Camera, ChevronLeft, ChevronRight, AlertTriangle, AlertCircle, Eye 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { ProductDetailsModal } from './ProductDetailsModal';
 
 export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
-  const { currentUser, logoutUser, addToast } = useAuth();
-  const [activeCategory, setActiveCategory] = useState('All');
+  const { currentUser, addToast, addToCart } = useAuth();
+
+  // Dynamic States
+  const [categories, setCategories] = useState([{ id: null, name: 'All' }]);
+  const [activeCategory, setActiveCategory] = useState({ id: null, name: 'All' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartCount, setCartCount] = useState(2);
+  
+  const [products, setProducts] = useState([]);
+  const [pageNo, setPageNo] = useState(0);
+  const [pageSize] = useState(12);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
 
-  const categories = ['All', 'Sunglasses', 'Prescription', 'Blue-Light', 'Luxury Line'];
+  // 1. Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/v1/categories');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          const mapped = data.data.map(cat => ({
+            id: cat.categoryId || cat.id,
+            name: cat.categoryName || cat.name
+          }));
+          setCategories([{ id: null, name: 'All' }, ...mapped]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
-  const products = [
-    {
-      id: 1,
-      name: 'OptiNova Aviator Titanium Gold',
-      category: 'Sunglasses',
-      price: '$285',
-      badge: 'Bestseller',
-      rating: 4.9,
-      iconColor: '#D4AF37'
-    },
-    {
-      id: 2,
-      name: 'Stellar Blue-Light Shield',
-      category: 'Blue-Light',
-      price: '$165',
-      badge: 'Popular',
-      rating: 4.8,
-      iconColor: '#38BDF8'
-    },
-    {
-      id: 3,
-      name: 'Monaco Handcrafted Acetate',
-      category: 'Luxury Line',
-      price: '$420',
-      badge: 'Limited Edition',
-      rating: 5.0,
-      iconColor: '#FB7185'
-    },
-    {
-      id: 4,
-      name: 'OptiClear HD Prescription Frames',
-      category: 'Prescription',
-      price: '$210',
-      badge: 'Medical Grade',
-      rating: 4.9,
-      iconColor: '#34D399'
-    },
-    {
-      id: 5,
-      name: 'Vanguard Polarized Sport',
-      category: 'Sunglasses',
-      price: '$240',
-      badge: 'UV400 Shield',
-      rating: 4.7,
-      iconColor: '#F59E0B'
-    },
-    {
-      id: 6,
-      name: 'Lumina Minimalist Rimless',
-      category: 'Prescription',
-      price: '$310',
-      badge: 'Ultralight 8g',
-      rating: 4.9,
-      iconColor: '#A855F7'
+  // 2. Fetch products on filter / search / pagination change
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        let url = '';
+        const paginationParams = `pageNo=${pageNo}&pageSize=${pageSize}&sortBy=id&sortDir=asc`;
+
+        if (searchQuery.trim()) {
+          url = `http://localhost:8080/api/v1/products/search?keyword=${encodeURIComponent(searchQuery.trim())}&${paginationParams}`;
+        } else if (activeCategory.id !== null) {
+          url = `http://localhost:8080/api/v1/products/category/${activeCategory.id}?${paginationParams}`;
+        } else {
+          url = `http://localhost:8080/api/v1/products?${paginationParams}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setProducts(data.data.content || []);
+          setTotalPages(data.data.totalPages || 0);
+          setTotalElements(data.data.totalElements || 0);
+        } else {
+          setError(data.message || 'Failed to fetch products');
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('Unable to connect to product server');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeCategory, searchQuery, pageNo, pageSize]);
+
+  const handleCategorySelect = (cat) => {
+    setActiveCategory(cat);
+    setPageNo(0);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setPageNo(0);
+  };
+
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const handleAddToCart = async (product, e) => {
+    if (e) e.stopPropagation();
+    const stock = product.stockQuantity ?? product.stock ?? 0;
+    if (stock <= 0) {
+      addToast('This product is currently out of stock and cannot be added.', 'error');
+      return;
     }
-  ];
+    const pId = product.id || product.productId;
+    await addToCart(pId, 1, product.name);
+  };
 
-  const filteredProducts = products.filter((p) => {
-    const matchesCat = activeCategory === 'All' || p.category === activeCategory;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
-
-  const handleAddToCart = (product) => {
-    setCartCount((prev) => prev + 1);
-    addToast(`Added "${product.name}" to your cart!`, 'success');
+  // Helper badge generator
+  const getProductBadge = (p) => {
+    const stock = p.stockQuantity ?? p.stock ?? 0;
+    if (stock <= 5) return 'Low Stock';
+    if (p.id % 5 === 0) return 'Bestseller';
+    if (p.id % 3 === 0) return 'Popular';
+    if (p.id % 7 === 0) return 'Limited Edition';
+    return 'Premium';
   };
 
   return (
     <div className="dashboard-container">
-      {/* Top Banner Header */}
+      {/* Top Hero Banner */}
       <div className="dashboard-hero">
         <div className="dashboard-hero-content">
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#D4AF37', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
             <Sparkles size={16} />
-            <span>EXCLUSIVE MEMBER CATALOG</span>
+            <span>EXCLUSIVE MEMBER CATALOG ({totalElements} Products Available)</span>
           </div>
 
           <h1 className="dashboard-hero-title">
@@ -113,63 +150,200 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* Categories & Search Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div className="category-tabs" style={{ marginBottom: 0 }}>
           {categories.map((cat) => (
             <button
-              key={cat}
-              className={`category-tab ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
+              key={cat.id ?? 'all'}
+              className={`category-tab ${activeCategory.id === cat.id ? 'active' : ''}`}
+              onClick={() => handleCategorySelect(cat)}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
 
-        <div style={{ position: 'relative', width: 280 }}>
+        <div style={{ position: 'relative', width: 300 }}>
           <Search style={{ position: 'absolute', left: 14, top: 12, color: 'var(--text-dim)' }} size={18} />
           <input
             type="text"
             className="form-input"
-            placeholder="Search eyewear..."
+            placeholder="Search 87+ eyewear products..."
             style={{ paddingLeft: 42 }}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="loading-box">
+          <div className="loading-spinner"></div>
+          <p>Loading eyewear products from catalog...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {!loading && error && (
+        <div className="empty-state-box">
+          <AlertTriangle size={36} color="var(--accent-rose)" style={{ marginBottom: '0.75rem' }} />
+          <h3>Error loading products</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Empty Search / Filter State */}
+      {!loading && !error && products.length === 0 && (
+        <div className="empty-state-box">
+          <Glasses size={48} color="var(--primary-gold)" style={{ marginBottom: '0.75rem' }} />
+          <h3>No Eyewear Found</h3>
+          <p>No products match your current search or category filter. Try clearing filters.</p>
+        </div>
+      )}
+
       {/* Products Grid */}
-      <div className="products-grid">
-        {filteredProducts.map((product) => (
-          <div key={product.id} className="product-card">
-            <div className="product-image-box">
-              <span className="product-badge">{product.badge}</span>
-              <Glasses size={80} color={product.iconColor} strokeWidth={1.2} />
-            </div>
+      {!loading && !error && products.length > 0 && (
+        <>
+          <div className="products-grid">
+            {products.map((product) => {
+              const imageUrl = (product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls[0] : null;
+              const categoryName = product.category?.categoryName || product.categoryName || product.category?.name || 'Eyewear';
+              const stock = product.stockQuantity ?? product.stock ?? 0;
+              const formattedPrice = `₹${Number(product.price).toLocaleString('en-IN')}`;
 
-            <div className="product-category">{product.category}</div>
-            <h3 className="product-title">{product.name}</h3>
+              const isOutOfStock = stock <= 0;
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem', color: '#F59E0B', marginBottom: '0.75rem' }}>
-              <Star size={14} fill="#F59E0B" />
-              <span>{product.rating} (120+ Reviews)</span>
-            </div>
+              return (
+                <div 
+                  key={product.id || product.productId} 
+                  className="product-card"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedProduct(product)}
+                >
+                  <div className="product-image-box">
+                    <span className="product-badge">{getProductBadge(product)}</span>
+                    {imageUrl ? (
+                      <img 
+                        src={imageUrl} 
+                        alt={product.name} 
+                        className="product-img"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          if (e.target.nextSibling) {
+                            e.target.nextSibling.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div style={{ display: imageUrl ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                      <Glasses size={80} color="#D4AF37" strokeWidth={1.2} />
+                    </div>
+                  </div>
 
-            <div className="product-price-row">
-              <div className="product-price">{product.price}</div>
-              <button 
-                className="add-cart-btn"
-                onClick={() => handleAddToCart(product)}
-              >
-                <ShoppingBag size={15} />
-                Add to Cart
-              </button>
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="product-category">{categoryName}</div>
+                    <div className="product-stock-info">
+                      <span className={stock > 0 ? 'stock-in' : 'stock-out'}>
+                        {stock > 0 ? `Stock: ${stock}` : 'Out of stock'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="product-title">{product.name}</h3>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem', color: '#F59E0B' }}>
+                      <Star size={14} fill="#F59E0B" />
+                      <span>4.8 (120+ Reviews)</span>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: 3, fontWeight: 500 }}>
+                      <Eye size={13} /> Details
+                    </span>
+                  </div>
+
+                  <div className="product-price-row">
+                    <div className="product-price">{formattedPrice}</div>
+                    <button 
+                      className={`add-cart-btn ${isOutOfStock ? 'disabled' : ''}`}
+                      onClick={(e) => handleAddToCart(product, e)}
+                      disabled={isOutOfStock}
+                      style={isOutOfStock ? {
+                        opacity: 0.6,
+                        background: 'rgba(251, 113, 133, 0.15)',
+                        borderColor: 'rgba(251, 113, 133, 0.4)',
+                        color: 'var(--accent-rose)',
+                        cursor: 'not-allowed'
+                      } : {}}
+                    >
+                      {isOutOfStock ? (
+                        <>
+                          <AlertCircle size={15} />
+                          Out of Stock
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag size={15} />
+                          Add to Cart
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <>
+              <div className="pagination-container">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPageNo((prev) => Math.max(prev - 1, 0))}
+                  disabled={pageNo === 0}
+                >
+                  <ChevronLeft size={18} />
+                  Previous
+                </button>
+
+                <div className="pagination-numbers">
+                  {Array.from({ length: totalPages }, (_, idx) => (
+                    <button
+                      key={idx}
+                      className={`page-num-btn ${pageNo === idx ? 'active' : ''}`}
+                      onClick={() => setPageNo(idx)}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  className="pagination-btn"
+                  onClick={() => setPageNo((prev) => Math.min(prev + 1, totalPages - 1))}
+                  disabled={pageNo >= totalPages - 1}
+                >
+                  Next
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="pagination-summary">
+                Showing page <strong>{pageNo + 1}</strong> of <strong>{totalPages}</strong> (Total <strong>{totalElements}</strong> products in catalog)
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   );
 };
