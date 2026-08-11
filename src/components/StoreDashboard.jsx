@@ -51,7 +51,7 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
       setError(null);
       try {
         let url = '';
-        const paginationParams = `pageNo=${pageNo}&pageSize=${pageSize}&sortBy=id&sortDir=asc`;
+        const paginationParams = `pageNo=${pageNo}&pageSize=${pageSize}&sortBy=productId&sortDir=asc`;
 
         if (searchQuery.trim()) {
           url = `${API_BASE_URL}/api/v1/products/search?keyword=${encodeURIComponent(searchQuery.trim())}&${paginationParams}`;
