@@ -490,13 +490,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok || response.status === 201) {
+        const msg = data.message || `Verification OTP code sent to ${formData.email}`;
         setOtpContext({
           mode: 'register',
           target: formData.email,
-          code: '',
+          code: data.data || '',
           draftData: formData
         });
-        addToast(`Verification OTP code sent to ${formData.email}!`, 'success');
+        addToast(msg, 'success');
         navigateTo('otp');
       } else {
         if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
@@ -505,13 +506,14 @@ export const AuthProvider = ({ children }) => {
             .join(' | ');
           addToast(detailedError, 'error');
         } else {
+          const msg = data.message || `Verification OTP code sent to ${formData.email}`;
           setOtpContext({
             mode: 'register',
             target: formData.email,
             code: '',
             draftData: formData
           });
-          addToast(`Verification OTP code sent to ${formData.email}`, 'info');
+          addToast(msg, 'info');
           navigateTo('otp');
         }
       }
