@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, X, Trash2, Plus, Minus, Glasses, ShoppingCart, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -57,12 +58,12 @@ export const CartModal = ({ isOpen, onClose, onOpenOrders }) => {
       return;
     }
 
-    const activeToken = token || localStorage.getItem('optinova_token');
+    const activeToken = token || localStorage.getItem('optinova_token') || localStorage.getItem('token');
 
     try {
       if (activeToken && activeToken !== 'mock_jwt_token') {
         // Call Backend to create Order & Razorpay Order
-        const response = await fetch('http://localhost:8080/api/v1/orders/razorpay/create', {
+        const response = await fetch(`${API_BASE_URL}/api/v1/orders/razorpay/create`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${activeToken}`,
@@ -85,11 +86,11 @@ export const CartModal = ({ isOpen, onClose, onOpenOrders }) => {
             currency: rzpData.currency || 'INR',
             name: 'OptiNova Eyewear',
             description: `Payment for Order #${rzpData.dbOrderId}`,
-            order_id: rzpData.razorpayOrderId.startsWith('order_') ? rzpData.razorpayOrderId : undefined,
+            order_id: (rzpData.razorpayOrderId && rzpData.razorpayOrderId.startsWith('order_')) ? rzpData.razorpayOrderId : undefined,
             handler: async function (paymentResponse) {
               addToast('Payment authorization received. Verifying signature...', 'info');
               try {
-                const verifyResp = await fetch('http://localhost:8080/api/v1/orders/razorpay/verify', {
+                const verifyResp = await fetch(`${API_BASE_URL}/api/v1/orders/razorpay/verify`, {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${activeToken}`,
@@ -153,6 +154,8 @@ export const CartModal = ({ isOpen, onClose, onOpenOrders }) => {
           });
           razorpayInstance.open();
           return;
+        } else if (json && json.message) {
+          addToast(`Checkout notice: ${json.message}`, 'warning');
         }
       }
 
@@ -193,7 +196,7 @@ export const CartModal = ({ isOpen, onClose, onOpenOrders }) => {
 
     } catch (err) {
       console.error('Checkout error:', err);
-      addToast('Error starting payment process. Please try again.', 'error');
+      addToast(err.message || 'Error starting payment process. Please try again.', 'error');
       setIsProcessingCheckout(false);
     }
   };
