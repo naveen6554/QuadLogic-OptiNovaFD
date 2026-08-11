@@ -19,6 +19,111 @@ export const AuthProvider = ({ children }) => {
   const [cartTotal, setCartTotal] = useState(0);
   const [loadingCart, setLoadingCart] = useState(false);
 
+  // Wishlist state
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('optinova_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('optinova_wishlist', JSON.stringify(wishlistItems));
+    } catch (e) {
+      console.warn('Wishlist write error:', e);
+    }
+  }, [wishlistItems]);
+
+  const isInWishlist = (productId) => {
+    if (!productId) return false;
+    return wishlistItems.some(item => (item.id || item.productId) === productId);
+  };
+
+  const toggleWishlist = (product) => {
+    if (!product) return;
+    const pId = product.id || product.productId;
+    if (isInWishlist(pId)) {
+      setWishlistItems(prev => prev.filter(item => (item.id || item.productId) !== pId));
+      addToast(`Removed "${product.name}" from your wishlist.`, 'info');
+    } else {
+      setWishlistItems(prev => [...prev, product]);
+      addToast(`Added "${product.name}" to your wishlist!`, 'success');
+    }
+  };
+
+  const removeFromWishlist = (productId) => {
+    setWishlistItems(prev => prev.filter(item => (item.id || item.productId) !== productId));
+    addToast('Item removed from wishlist.', 'info');
+  };
+
+  const clearWishlist = () => {
+    setWishlistItems([]);
+    addToast('Wishlist cleared.', 'info');
+  };
+
+  // User Reviews & Rating state
+  const [userReviews, setUserReviews] = useState(() => {
+    try {
+      const saved = localStorage.getItem('optinova_user_reviews');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('optinova_user_reviews', JSON.stringify(userReviews));
+    } catch (e) {
+      console.warn('User reviews write warning:', e);
+    }
+  }, [userReviews]);
+
+  const submitProductReview = (reviewData) => {
+    if (!reviewData || !reviewData.productId) return;
+    setUserReviews(prev => {
+      const filtered = prev.filter(r => !(r.productId === reviewData.productId && r.orderId === reviewData.orderId));
+      return [...filtered, { ...reviewData, createdAt: new Date().toISOString() }];
+    });
+    addToast(`Thank you! Your ${reviewData.rating}-star review for "${reviewData.productName}" has been submitted.`, 'success');
+  };
+
+  const getUserReviewForProduct = (productId, orderId) => {
+    if (!productId) return null;
+    return userReviews.find(r => r.productId === productId && (!orderId || r.orderId === orderId));
+  };
+
+  const getProductReviews = (productId) => {
+    const defaultReviews = [
+      {
+        rating: 5,
+        comment: 'Extremely lightweight and premium optical clarity. Best eyewear purchase!',
+        username: 'Naveen K. (Verified Buyer)',
+        createdAt: '2026-08-01'
+      },
+      {
+        rating: 5,
+        comment: 'Super fast delivery and incredible frame durability. High quality lenses!',
+        username: 'Alex M. (Verified Buyer)',
+        createdAt: '2026-07-28'
+      }
+    ];
+
+    const matchingUserReviews = userReviews
+      .filter(r => (r.productId === productId || String(r.productId) === String(productId)))
+      .map(r => ({
+        rating: r.rating,
+        comment: r.comment,
+        username: `${r.username || 'Customer'} (Verified Buyer)`,
+        createdAt: r.createdAt
+      }));
+
+    return [...matchingUserReviews, ...defaultReviews];
+  };
+
   // Pending verification flow context
   const [otpContext, setOtpContext] = useState({
     mode: 'register', // 'register' or 'forgot_password'
@@ -135,9 +240,13 @@ export const AuthProvider = ({ children }) => {
       if (response.ok && jwtToken) {
         const userResp = data.user || {};
         const detectedRole = userResp.role || (usernameOrEmail.toLowerCase().includes('admin') ? 'ADMIN' : 'CUSTOMER');
+        const rawName = userResp.firstName || userResp.username || (userResp.email ? userResp.email.split('@')[0] : (usernameOrEmail.includes('@') ? usernameOrEmail.split('@')[0] : usernameOrEmail));
+        const formattedFirstName = rawName ? (rawName.charAt(0).toUpperCase() + rawName.slice(1)) : 'Customer';
+
         const userObj = {
           userId: userResp.userId || userResp.id,
-          firstName: userResp.username || (userResp.email ? userResp.email.split('@')[0] : 'Member'),
+          firstName: formattedFirstName,
+          username: userResp.username || rawName,
           email: userResp.email || usernameOrEmail,
           role: detectedRole,
           tier: detectedRole === 'ADMIN' ? 'System Administrator' : 'VIP Member'
@@ -185,10 +294,13 @@ export const AuthProvider = ({ children }) => {
       console.warn('Backend login fallback:', err);
       // Offline fallback
       const isAdminLogin = usernameOrEmail.toLowerCase().includes('admin');
+      const rawName = usernameOrEmail.includes('@') ? usernameOrEmail.split('@')[0] : usernameOrEmail;
+      const formattedFirstName = isAdminLogin ? 'Admin' : (rawName ? (rawName.charAt(0).toUpperCase() + rawName.slice(1)) : 'Customer');
+
       const mockUser = {
         userId: isAdminLogin ? 100 : 1,
-        firstName: isAdminLogin ? 'Admin' : 'Alex',
-        username: usernameOrEmail.includes('@') ? usernameOrEmail.split('@')[0] : usernameOrEmail,
+        firstName: formattedFirstName,
+        username: rawName,
         email: usernameOrEmail.includes('@') ? usernameOrEmail : `${usernameOrEmail}@optinova.com`,
         role: isAdminLogin ? 'ADMIN' : 'CUSTOMER',
         tier: isAdminLogin ? 'System Administrator' : 'VIP Member'
@@ -571,7 +683,21 @@ export const AuthProvider = ({ children }) => {
         addToCart,
         updateCartItemQuantity,
         removeCartItem,
-        clearCart
+        clearCart,
+
+        // Wishlist Exports
+        wishlistItems,
+        wishlistCount: wishlistItems.length,
+        isInWishlist,
+        toggleWishlist,
+        removeFromWishlist,
+        clearWishlist,
+
+        // Rating & Review Exports
+        userReviews,
+        submitProductReview,
+        getUserReviewForProduct,
+        getProductReviews
       }}
     >
       {children}

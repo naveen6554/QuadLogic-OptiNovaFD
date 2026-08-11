@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Glasses, LogOut, User, Sparkles, AlertCircle, CheckCircle, Info, ShoppingBag, Package, Shield } from 'lucide-react';
+import { Glasses, LogOut, User, Sparkles, AlertCircle, CheckCircle, Info, ShoppingBag, Package, Shield, ChevronDown, Heart } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import { SplashScreen } from './components/SplashScreen';
@@ -16,13 +16,16 @@ import { TermsModal } from './components/TermsModal';
 import { VirtualTryOnModal } from './components/VirtualTryOnModal';
 import { CartModal } from './components/CartModal';
 import { OrdersModal } from './components/OrdersModal';
+import { WishlistModal } from './components/WishlistModal';
 
 const AppContent = () => {
-  const { currentScreen, navigateTo, currentUser, logoutUser, toasts, cartCount } = useAuth();
+  const { currentScreen, navigateTo, currentUser, logoutUser, toasts, cartCount, wishlistCount } = useAuth();
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'ADMINISTRATOR');
 
@@ -45,47 +48,26 @@ const AppContent = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             {/* Navigation links for Dashboard or Admin Panel */}
             {(currentScreen === 'dashboard' || currentScreen === 'admin') && (
               <>
-                {/* Admin Panel Dedicated Link */}
-                {isAdmin && (
+                {/* 1. Header Wishlist Button beside Cart */}
+                {currentScreen === 'dashboard' && (
                   <button 
                     className="header-cart-btn" 
-                    onClick={() => navigateTo(currentScreen === 'admin' ? 'dashboard' : 'admin')}
-                    title="Admin Control Panel"
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.45rem', 
-                      padding: '0.4rem 0.85rem',
-                      background: currentScreen === 'admin' ? 'rgba(212, 175, 55, 0.25)' : 'rgba(212, 175, 55, 0.12)',
-                      border: '1px solid var(--border-accent)',
-                      color: 'var(--primary-gold)'
-                    }}
+                    onClick={() => setIsWishlistOpen(true)}
+                    title="My Wishlist"
+                    style={{ position: 'relative' }}
                   >
-                    <Shield size={18} color="#D4AF37" />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-                      {currentScreen === 'admin' ? 'Store Front' : 'Admin Panel'}
-                    </span>
+                    <Heart size={20} color="#FB7185" fill={wishlistCount > 0 ? '#FB7185' : 'none'} />
+                    {wishlistCount > 0 && (
+                      <span className="cart-badge-count" style={{ background: '#FB7185' }}>{wishlistCount}</span>
+                    )}
                   </button>
                 )}
 
-                {/* My Orders Button */}
-                {currentUser && currentScreen === 'dashboard' && (
-                  <button 
-                    className="header-cart-btn" 
-                    onClick={() => setIsOrdersOpen(true)}
-                    title="My Orders"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.85rem' }}
-                  >
-                    <Package size={18} color="#34D399" />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>My Orders</span>
-                  </button>
-                )}
-
-                {/* Header Shopping Cart Button with Dynamic Badge */}
+                {/* 2. Header Shopping Cart Button with Dynamic Badge */}
                 {currentScreen === 'dashboard' && (
                   <button 
                     className="header-cart-btn" 
@@ -99,20 +81,164 @@ const AppContent = () => {
                   </button>
                 )}
 
+                {/* Profile Button & Integrated Dropdown Menu containing My Orders & Logout */}
                 {currentUser && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--border-accent)', padding: '0.4rem 0.85rem', borderRadius: 9999 }}>
-                      <User size={16} color="#D4AF37" />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#FFF' }}>{currentUser.firstName}</span>
-                    </div>
-                    <button 
-                      onClick={logoutUser} 
-                      className="close-btn"
-                      title="Logout"
-                      style={{ color: 'var(--accent-rose)' }}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.55rem',
+                        background: 'rgba(212, 175, 55, 0.12)',
+                        border: '1px solid var(--border-accent)',
+                        padding: '0.45rem 0.9rem',
+                        borderRadius: '9999px',
+                        color: '#FFF',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+                      }}
                     >
-                      <LogOut size={18} />
+                      <User size={16} color="#D4AF37" />
+                      <span>{currentUser.firstName || currentUser.username || 'My Profile'}</span>
+                      <ChevronDown 
+                        size={14} 
+                        color="var(--primary-gold)" 
+                        style={{ 
+                          transform: isProfileDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
+                          transition: 'transform 0.2s ease' 
+                        }} 
+                      />
                     </button>
+
+                    {/* Backdrop to close dropdown on click outside */}
+                    {isProfileDropdownOpen && (
+                      <div 
+                        style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+                        onClick={() => setIsProfileDropdownOpen(false)} 
+                      />
+                    )}
+
+                    {/* Profile Dropdown Menu */}
+                    {isProfileDropdownOpen && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 'calc(100% + 10px)',
+                          width: '230px',
+                          background: 'rgba(19, 27, 46, 0.96)',
+                          border: '1px solid rgba(212, 175, 55, 0.35)',
+                          borderRadius: '12px',
+                          backdropFilter: 'blur(20px)',
+                          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+                          zIndex: 100,
+                          padding: '0.5rem 0',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {/* User Header Info */}
+                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '0.25rem' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#FFF' }}>
+                            {currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : currentUser.username}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94A3B8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.1rem' }}>
+                            {currentUser.email || currentUser.username}
+                          </div>
+                        </div>
+
+                        {/* 1. My Orders Option */}
+                        <button
+                          onClick={() => {
+                            setIsOrdersOpen(true);
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.65rem',
+                            padding: '0.65rem 1rem',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#FFF',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Package size={17} color="#34D399" />
+                          <span>My Orders</span>
+                        </button>
+
+                        {/* Admin Control Panel Option */}
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              navigateTo(currentScreen === 'admin' ? 'dashboard' : 'admin');
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.65rem',
+                              padding: '0.65rem 1rem',
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--primary-gold)',
+                              fontSize: '0.85rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(212, 175, 55, 0.12)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <Shield size={17} color="#D4AF37" />
+                            <span>{currentScreen === 'admin' ? 'Store Front' : 'Admin Panel'}</span>
+                          </button>
+                        )}
+
+                        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '0.35rem 0' }} />
+
+                        {/* 2. Logout Option */}
+                        <button
+                          onClick={() => {
+                            setIsProfileDropdownOpen(false);
+                            logoutUser();
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.65rem',
+                            padding: '0.65rem 1rem',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#FB7185',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(251, 113, 133, 0.12)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <LogOut size={17} color="#FB7185" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -140,6 +266,7 @@ const AppContent = () => {
       <VirtualTryOnModal isOpen={isTryOnOpen} onClose={() => setIsTryOnOpen(false)} />
       <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} onOpenOrders={() => setIsOrdersOpen(true)} />
       <OrdersModal isOpen={isOrdersOpen} onClose={() => setIsOrdersOpen(false)} />
+      <WishlistModal isOpen={isWishlistOpen} onClose={() => setIsWishlistOpen(false)} />
 
       {/* Floating Toast Notification Stack */}
       <div className="toast-container">

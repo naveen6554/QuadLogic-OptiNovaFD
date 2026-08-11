@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Package, X, Glasses, CheckCircle2, Calendar } from 'lucide-react';
+import { Package, X, Glasses, CheckCircle2, Calendar, Star, ThumbsUp, MessageSquare, Download, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { handleDirectPdfDownload } from '../utils/downloadInvoice';
 
 export const OrdersModal = ({ isOpen, onClose }) => {
-  const { token, currentUser } = useAuth();
+  const { token, currentUser, submitProductReview, getUserReviewForProduct, addToast } = useAuth();
   const [ordersData, setOrdersData] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Active Order Detail View State
+  const [viewingOrderDetail, setViewingOrderDetail] = useState(null);
+
+  // Rating Modal state
+  const [ratingTargetItem, setRatingTargetItem] = useState(null);
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -341,6 +350,135 @@ export const OrdersModal = ({ isOpen, onClose }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Customer Invoice & Order Actions Bar */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      paddingTop: '0.65rem',
+                      marginTop: '0.4rem',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                        {(item.status || '').toUpperCase() === 'PENDING' ? (
+                          <span style={{ color: '#F59E0B', fontStyle: 'italic' }}>
+                            ⚠ Invoice will be available after payment confirmation.
+                          </span>
+                        ) : (item.status || '').toUpperCase() === 'CANCELLED' ? (
+                          <span style={{ color: '#EF4444', fontWeight: 600 }}>
+                            ● Cancelled Invoice / Refund Statement
+                          </span>
+                        ) : (
+                          <span style={{ color: '#10B981', fontWeight: 600 }}>
+                            ✓ Payment Confirmed & Settled
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => setViewingOrderDetail(item)}
+                          style={{
+                            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            color: '#3B82F6',
+                            padding: '5px 12px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Eye size={13} />
+                          <span>View Order</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDirectPdfDownload(item, addToast)}
+                          disabled={(item.status || '').toUpperCase() === 'PENDING'}
+                          style={{
+                            backgroundColor: (item.status || '').toUpperCase() === 'PENDING' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(212, 175, 55, 0.15)',
+                            border: (item.status || '').toUpperCase() === 'PENDING' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #D4AF37',
+                            color: (item.status || '').toUpperCase() === 'PENDING' ? '#64748B' : '#D4AF37',
+                            padding: '5px 14px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: (item.status || '').toUpperCase() === 'PENDING' ? 'not-allowed' : 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Download size={13} />
+                          <span>Download Invoice</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Rate & Review Button / Submitted Review Badge for Customer */}
+                    {(() => {
+                      const existingReview = getUserReviewForProduct(item.productId, item.orderId);
+                      if (existingReview) {
+                        return (
+                          <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 10, padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} size={13} color="#F59E0B" fill={s <= existingReview.rating ? '#F59E0B' : 'none'} />
+                                ))}
+                              </div>
+                              <span style={{ fontSize: '0.78rem', color: '#FFF', fontStyle: 'italic' }}>"{existingReview.comment}"</span>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                setRatingTargetItem(item);
+                                setRatingStars(existingReview.rating);
+                                setRatingComment(existingReview.comment);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
+                            >
+                              Edit Rating
+                            </button>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                            <button
+                              onClick={() => {
+                                setRatingTargetItem(item);
+                                setRatingStars(5);
+                                setRatingComment('');
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(212, 175, 55, 0.12) 100%)',
+                                border: '1px solid #F59E0B',
+                                color: '#F59E0B',
+                                padding: '0.4rem 0.85rem',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                              <span>Rate & Review Product</span>
+                            </button>
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 );
               })}
@@ -372,6 +510,93 @@ export const OrdersModal = ({ isOpen, onClose }) => {
             Close Orders
           </button>
         </div>
+
+        {/* Sub-Modal: Rate & Review Dialog for Received Order Item */}
+        {ratingTargetItem && (
+          <div className="modal-overlay" style={{ display: 'flex', zIndex: 120 }}>
+            <div className="modal-container glass-card" style={{ maxWidth: '480px', width: '100%', padding: '1.5rem', background: 'rgba(19, 27, 46, 0.98)', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+              <div className="modal-header" style={{ marginBottom: '1rem' }}>
+                <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#FFF' }}>
+                  <Star size={20} color="#F59E0B" fill="#F59E0B" />
+                  <span>Rate & Review Received Item</span>
+                </h3>
+                <button className="close-btn" onClick={() => setRatingTargetItem(null)}><X size={18} /></button>
+              </div>
+
+              <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#FFF', marginBottom: '0.25rem' }}>
+                  {ratingTargetItem.name}
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Order #{ratingTargetItem.orderId} • Delivered Order Item
+                </p>
+
+                {/* Interactive 5-Star Selection */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', margin: '1.25rem 0' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRatingStars(star)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                        transform: ratingStars >= star ? 'scale(1.15)' : 'scale(1)',
+                        transition: 'transform 0.15s ease'
+                      }}
+                    >
+                      <Star 
+                        size={32} 
+                        color="#F59E0B" 
+                        fill={ratingStars >= star ? '#F59E0B' : 'none'} 
+                      />
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F59E0B' }}>
+                  {ratingStars === 5 ? '⭐⭐⭐⭐⭐ Excellent' : ratingStars === 4 ? '⭐⭐⭐⭐ Great' : ratingStars === 3 ? '⭐⭐⭐ Good' : '⭐⭐ Fair'}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Your Customer Feedback / Review</label>
+                <textarea
+                  className="form-input form-input-no-icon"
+                  rows="3"
+                  placeholder="Share your experience regarding optical frame fit, lens clarity, or build quality..."
+                  value={ratingComment}
+                  onChange={(e) => setRatingComment(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn-secondary" onClick={() => setRatingTargetItem(null)}>Cancel</button>
+                <button 
+                  type="button" 
+                  className="btn-primary" 
+                  style={{ width: 'auto', padding: '0.55rem 1.4rem', background: 'linear-gradient(135deg, #F59E0B 0%, #D4AF37 100%)', color: '#000', fontWeight: 800 }}
+                  onClick={() => {
+                    submitProductReview({
+                      productId: ratingTargetItem.productId,
+                      orderId: ratingTargetItem.orderId,
+                      productName: ratingTargetItem.name,
+                      rating: ratingStars,
+                      comment: ratingComment.trim() || 'Great eyewear and excellent build quality!',
+                      username: currentUser?.firstName || currentUser?.username || 'Verified Customer'
+                    });
+                    setRatingTargetItem(null);
+                  }}
+                >
+                  Submit Customer Review
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Invoice Preview & Download Modal Overlay */}
       </div>
     </div>
   );

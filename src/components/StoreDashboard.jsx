@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Glasses, ShoppingBag, Search, Sparkles, Star, Camera, ChevronLeft, ChevronRight, AlertTriangle, AlertCircle, Eye 
+  Glasses, ShoppingBag, Search, Sparkles, Star, Camera, ChevronLeft, ChevronRight, AlertTriangle, AlertCircle, Eye, Heart 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProductDetailsModal } from './ProductDetailsModal';
 
 export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
-  const { currentUser, addToast, addToCart } = useAuth();
+  const { currentUser, addToast, addToCart, isInWishlist, toggleWishlist } = useAuth();
 
   // Dynamic States
   const [categories, setCategories] = useState([{ id: null, name: 'All' }]);
@@ -222,8 +222,38 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
                   style={{ cursor: 'pointer' }}
                   onClick={() => setSelectedProduct(product)}
                 >
-                  <div className="product-image-box">
+                  <div className="product-image-box" style={{ position: 'relative' }}>
                     <span className="product-badge">{getProductBadge(product)}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(product);
+                      }}
+                      title={isInWishlist(product.id || product.productId) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: isInWishlist(product.id || product.productId) ? 'rgba(251, 113, 133, 0.25)' : 'rgba(11, 15, 25, 0.65)',
+                        border: isInWishlist(product.id || product.productId) ? '1px solid #FB7185' : '1px solid rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Heart 
+                        size={17} 
+                        color={isInWishlist(product.id || product.productId) ? '#FB7185' : '#FFF'} 
+                        fill={isInWishlist(product.id || product.productId) ? '#FB7185' : 'none'} 
+                      />
+                    </button>
                     {imageUrl ? (
                       <img 
                         src={imageUrl} 

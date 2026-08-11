@@ -28,6 +28,19 @@
   --radius-xl: 28px;
   --radius-full: 9999px;
   
+  /* Enterprise Admin Panel Theme Tokens */
+  --admin-bg: #0F172A;
+  --admin-sidebar-bg: #111827;
+  --admin-card-bg: #1E293B;
+  --admin-card-hover: #273549;
+  --admin-primary: #3B82F6;
+  --admin-success: #10B981;
+  --admin-warning: #F59E0B;
+  --admin-danger: #EF4444;
+  --admin-text-primary: #FFFFFF;
+  --admin-text-secondary: #94A3B8;
+  --admin-border: rgba(255, 255, 255, 0.08);
+
   --shadow-gold: 0 10px 30px -10px rgba(212, 175, 55, 0.25);
   --shadow-cyan: 0 10px 30px -10px rgba(56, 189, 248, 0.25);
   --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
