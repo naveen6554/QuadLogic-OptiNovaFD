@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProductDetailsModal } from './ProductDetailsModal';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   const { currentUser, addToast, addToCart, isInWishlist, toggleWishlist } = useAuth();
@@ -15,7 +16,7 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   
   const [products, setProducts] = useState([]);
   const [pageNo, setPageNo] = useState(0);
-  const [pageSize] = useState(12);
+  const [pageSize] = useState(6);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   
@@ -27,7 +28,7 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/categories');
+        const response = await fetch(`${API_BASE_URL}/api/v1/categories`);
         const data = await response.json();
         if (data.success && Array.isArray(data.data)) {
           const mapped = data.data.map(cat => ({
@@ -53,11 +54,11 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
         const paginationParams = `pageNo=${pageNo}&pageSize=${pageSize}&sortBy=id&sortDir=asc`;
 
         if (searchQuery.trim()) {
-          url = `http://localhost:8080/api/v1/products/search?keyword=${encodeURIComponent(searchQuery.trim())}&${paginationParams}`;
+          url = `${API_BASE_URL}/api/v1/products/search?keyword=${encodeURIComponent(searchQuery.trim())}&${paginationParams}`;
         } else if (activeCategory.id !== null) {
-          url = `http://localhost:8080/api/v1/products/category/${activeCategory.id}?${paginationParams}`;
+          url = `${API_BASE_URL}/api/v1/products/category/${activeCategory.id}?${paginationParams}`;
         } else {
-          url = `http://localhost:8080/api/v1/products?${paginationParams}`;
+          url = `${API_BASE_URL}/api/v1/products?${paginationParams}`;
         }
 
         const response = await fetch(url);
