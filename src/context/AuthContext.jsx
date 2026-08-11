@@ -496,7 +496,7 @@ export const AuthProvider = ({ children }) => {
           code: '',
           draftData: formData
         });
-        addToast(data.message || `OTP sent to ${formData.email}!`, 'success');
+        addToast(`Verification OTP code sent to ${formData.email}!`, 'success');
         navigateTo('otp');
       } else {
         if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
@@ -504,17 +504,15 @@ export const AuthProvider = ({ children }) => {
             .map(([field, err]) => `${field}: ${err}`)
             .join(' | ');
           addToast(detailedError, 'error');
-        } else if (data.message && data.message.includes('already exists')) {
+        } else {
           setOtpContext({
             mode: 'register',
             target: formData.email,
             code: '',
             draftData: formData
           });
-          addToast(data.message, 'info');
+          addToast(`Verification OTP code sent to ${formData.email}`, 'info');
           navigateTo('otp');
-        } else {
-          addToast(data.message || 'Registration failed', 'error');
         }
       }
     } catch (err) {
