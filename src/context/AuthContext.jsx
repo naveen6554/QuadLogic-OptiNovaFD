@@ -611,13 +611,13 @@ export const AuthProvider = ({ children }) => {
   // Verify OTP Success handler
   const handleVerifyOtpSuccess = () => {
     if (otpContext.mode === 'register') {
-      addToast('Account verified and logged in successfully!', 'success');
-      navigateTo('dashboard');
+      addToast('Registration & OTP verification complete! Please log in with your email & password.', 'success');
+      navigateTo('login');
     } else if (otpContext.mode === 'forgot_password') {
       addToast('Identity verified. Please set a new password.', 'success');
       navigateTo('reset_password');
     } else {
-      navigateTo('dashboard');
+      navigateTo('login');
     }
   };
 
