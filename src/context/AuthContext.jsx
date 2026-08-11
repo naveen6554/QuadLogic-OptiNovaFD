@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const AuthContext = createContext(null);
 
@@ -161,7 +162,7 @@ export const AuthProvider = ({ children }) => {
 
     setLoadingCart(true);
     try {
-      const response = await fetch('http://localhost:8080/api/v1/cart', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart`, {
         headers: {
           'Authorization': `Bearer ${activeToken}`,
           'Content-Type': 'application/json'
@@ -227,7 +228,7 @@ export const AuthProvider = ({ children }) => {
   // 2. Real Backend Login handler
   const loginUser = async (usernameOrEmail, password) => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: usernameOrEmail, password })
@@ -329,7 +330,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/cart/items', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart/items`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${activeToken}`,
@@ -372,7 +373,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${cartItemId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart/items/${cartItemId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${activeToken}`,
@@ -406,7 +407,7 @@ export const AuthProvider = ({ children }) => {
     if (!activeToken) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${cartItemId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart/items/${cartItemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${activeToken}`,
@@ -439,7 +440,7 @@ export const AuthProvider = ({ children }) => {
     if (!activeToken) return;
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/cart', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${activeToken}`,
@@ -480,7 +481,7 @@ export const AuthProvider = ({ children }) => {
         phone: cleanPhone
       };
 
-      const response = await fetch('http://localhost:8080/api/v1/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -531,7 +532,7 @@ export const AuthProvider = ({ children }) => {
   // Initiate Forgot Password -> Send request to Backend API
   const initiateForgotPassword = async (emailOrUser) => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailOrUser })
@@ -561,7 +562,7 @@ export const AuthProvider = ({ children }) => {
   // Verify OTP against Backend API
   const verifyOtp = async (enteredOtp) => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -571,8 +572,8 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
-      if (response.ok && data.accessToken) {
-        const accessToken = data.accessToken;
+      if (response.ok && (data.accessToken || data.token)) {
+        const accessToken = data.accessToken || data.token;
         const userResp = data.user || {};
         const userObj = {
           userId: userResp.userId || userResp.id,
@@ -584,7 +585,9 @@ export const AuthProvider = ({ children }) => {
 
         setToken(accessToken);
         setCurrentUser(userObj);
+        localStorage.setItem('token', accessToken);
         localStorage.setItem('optinova_token', accessToken);
+        localStorage.setItem('user', JSON.stringify(userObj));
         localStorage.setItem('optinova_user', JSON.stringify(userObj));
 
         await fetchCart(accessToken);
@@ -608,11 +611,13 @@ export const AuthProvider = ({ children }) => {
   // Verify OTP Success handler
   const handleVerifyOtpSuccess = () => {
     if (otpContext.mode === 'register') {
-      addToast('Account registered successfully! Please log in.', 'success');
-      navigateTo('reg_success');
+      addToast('Account verified and logged in successfully!', 'success');
+      navigateTo('dashboard');
     } else if (otpContext.mode === 'forgot_password') {
       addToast('Identity verified. Please set a new password.', 'success');
       navigateTo('reset_password');
+    } else {
+      navigateTo('dashboard');
     }
   };
 
