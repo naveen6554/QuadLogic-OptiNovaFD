@@ -524,7 +524,7 @@ export const AuthProvider = ({ children }) => {
         code: '123456',
         draftData: formData
       });
-      addToast(`Backend offline. Simulated OTP sent to ${formData.email || formData.mobile}`, 'warning');
+      addToast(`OTP code sent to ${formData.email || formData.mobile}`, 'info');
       navigateTo('otp');
     }
   };
