@@ -421,7 +421,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error('Add to cart error:', err);
-      addToast('Network error while adding to cart.', 'error');
+      addToast(err?.message ? `Cart error: ${err.message}` : 'Network error while adding to cart.', 'error');
       return { success: false };
     }
   };
