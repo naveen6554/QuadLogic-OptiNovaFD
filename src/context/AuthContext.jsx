@@ -395,6 +395,13 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ productId, quantity })
       });
 
+      if (response.status === 401) {
+        logout();
+        addToast('Session expired. Please login again.', 'error');
+        navigateTo('login');
+        return { success: false };
+      }
+
       const json = await response.json();
 
       if (response.ok && json.success && json.data) {
@@ -408,7 +415,7 @@ export const AuthProvider = ({ children }) => {
         addToast(json.message || `Added "${productName}" to your cart!`, 'success');
         return { success: true, count: totalItems };
       } else {
-        const errMsg = json.message || 'Could not add product to cart.';
+        const errMsg = json?.message || 'Could not add product to cart.';
         addToast(errMsg, 'error');
         return { success: false, message: errMsg };
       }
