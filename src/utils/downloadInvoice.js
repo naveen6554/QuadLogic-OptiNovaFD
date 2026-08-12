@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/apiConfig';
+
 /**
  * Utility function to handle direct PDF invoice downloads for Customer Store & Admin Panel.
  * Validates order status, calls backend PDF endpoint with responseType 'blob', and triggers automatic download.
@@ -22,7 +24,7 @@ export const handleDirectPdfDownload = async (order, addToast) => {
     if (addToast) addToast(`Generating PDF invoice ${filename}...`, 'info');
 
     // 1. Call Backend Invoice API
-    const response = await fetch(`http://localhost:8080/api/v1/orders/${orderId}/invoice`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/invoice`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -50,7 +52,7 @@ export const handleDirectPdfDownload = async (order, addToast) => {
     }
 
     // Try fallback endpoint /api/orders/{orderId}/invoice
-    const fallbackResponse = await fetch(`http://localhost:8080/api/orders/${orderId}/invoice`, {
+    const fallbackResponse = await fetch(`${API_BASE_URL}/api/orders/${orderId}/invoice`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`

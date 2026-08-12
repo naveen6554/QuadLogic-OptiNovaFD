@@ -158,6 +158,14 @@ export const LoginScreen = () => {
           Register Here
         </span>
       </div>
+
+      <div className="form-bottom-prompt" style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem' }}>
+        <Shield size={14} color="#D4AF37" style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+        <span>System Administrator? </span>
+        <span className="text-link" style={{ color: '#D4AF37', fontWeight: 700 }} onClick={() => navigateTo('admin_login')}>
+          Admin Security Portal →
+        </span>
+      </div>
     </div>
   );
 };

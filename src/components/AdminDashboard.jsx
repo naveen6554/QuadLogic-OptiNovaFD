@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/apiConfig';
 import optinovaBg from '../assets/optinova_bg.png';
 import { AdminSidebar } from './admin/AdminSidebar';
 import { AdminTopNavbar } from './admin/AdminTopNavbar';
@@ -377,10 +378,10 @@ export const AdminDashboard = () => {
 
     try {
       const [dailyRes, monthlyRes, yearlyRes, overallRes] = await Promise.all([
-        fetch('http://localhost:8080/api/admin/revenue/daily', { headers }),
-        fetch('http://localhost:8080/api/admin/revenue/monthly', { headers }),
-        fetch('http://localhost:8080/api/admin/revenue/yearly', { headers }),
-        fetch('http://localhost:8080/api/admin/revenue/overall', { headers })
+        fetch(`${API_BASE_URL}/api/admin/revenue/daily`, { headers }),
+        fetch(`${API_BASE_URL}/api/admin/revenue/monthly`, { headers }),
+        fetch(`${API_BASE_URL}/api/admin/revenue/yearly`, { headers }),
+        fetch(`${API_BASE_URL}/api/admin/revenue/overall`, { headers })
       ]);
 
       const [dailyJson, monthlyJson, yearlyJson, overallJson] = await Promise.all([
@@ -420,8 +421,8 @@ export const AdminDashboard = () => {
 
     try {
       const [prodRes, catRes] = await Promise.all([
-        fetch('http://localhost:8080/api/v1/products?pageSize=100'),
-        fetch('http://localhost:8080/api/v1/categories')
+        fetch(`${API_BASE_URL}/api/v1/products?pageSize=100`),
+        fetch(`${API_BASE_URL}/api/v1/categories`)
       ]);
 
       if (prodRes.ok) {
@@ -449,7 +450,7 @@ export const AdminDashboard = () => {
     setLoadingUsers(true);
     const activeToken = token || localStorage.getItem('optinova_token');
     try {
-      const res = await fetch('http://localhost:8080/api/admin/users', {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: { 
           'Authorization': `Bearer ${activeToken}`,
           'Content-Type': 'application/json' 
@@ -483,7 +484,7 @@ export const AdminDashboard = () => {
 
   const fetchCatalogImages = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/products?pageSize=100');
+      const response = await fetch(`${API_BASE_URL}/api/v1/products?pageSize=100`);
       if (response.ok) {
         const json = await response.json();
         const items = json.data?.content || json.data || json.content || [];
@@ -531,7 +532,7 @@ export const AdminDashboard = () => {
     const activeToken = token || localStorage.getItem('optinova_token');
 
     try {
-      const response = await fetch('http://localhost:8080/api/admin/products', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${activeToken}`,
@@ -588,7 +589,7 @@ export const AdminDashboard = () => {
     const activeToken = token || localStorage.getItem('optinova_token');
 
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/products/${deleteProductTarget.productId || deleteProductTarget.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/products/${deleteProductTarget.productId || deleteProductTarget.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
@@ -640,7 +641,7 @@ export const AdminDashboard = () => {
         payload.password = editUserForm.password;
       }
 
-      const response = await fetch(`http://localhost:8080/api/admin/users/${editUserTarget.userId || editUserTarget.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users/${editUserTarget.userId || editUserTarget.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${activeToken}`,

@@ -4,9 +4,65 @@ import { API_BASE_URL } from '../config/apiConfig';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  // Navigation Screens: 'splash', 'welcome', 'login', 'register', 'otp', 'forgot_password', 'reset_password', 'reg_success', 'dashboard'
-  const [currentScreen, setCurrentScreen] = useState('login');
-  
+  const getPathForScreen = (screen) => {
+    switch (screen) {
+      case 'admin_login': return '/admin/login';
+      case 'admin': return '/admin';
+      case 'login': return '/login';
+      case 'register': return '/register';
+      case 'otp': return '/otp';
+      case 'forgot_password': return '/forgot-password';
+      case 'reset_password': return '/reset-password';
+      case 'dashboard': return '/shop';
+      case 'hero_showcase': return '/';
+      default: return '/';
+    }
+  };
+
+  const getScreenForPath = (path) => {
+    const cleanPath = path.toLowerCase().replace(/\/$/, '') || '/';
+    if (cleanPath === '/admin/login' || cleanPath === '/admin-login') return 'admin_login';
+    if (cleanPath === '/admin') return 'admin';
+    if (cleanPath === '/login') return 'login';
+    if (cleanPath === '/register') return 'register';
+    if (cleanPath === '/otp') return 'otp';
+    if (cleanPath === '/forgot-password') return 'forgot_password';
+    if (cleanPath === '/reset-password') return 'reset_password';
+    if (cleanPath === '/shop' || cleanPath === '/dashboard') return 'dashboard';
+    if (cleanPath === '/' || cleanPath === '/home') return 'hero_showcase';
+    return null;
+  };
+
+  // Navigation Screens: 'splash', 'welcome', 'login', 'register', 'otp', 'forgot_password', 'reset_password', 'reg_success', 'hero_showcase', 'dashboard', 'admin', 'admin_login'
+  const [currentScreen, setCurrentScreen] = useState(() => {
+    const screenFromUrl = getScreenForPath(window.location.pathname);
+    if (screenFromUrl) {
+      if (screenFromUrl === 'admin_login') return 'admin_login';
+      if (screenFromUrl === 'admin') {
+        const savedUser = localStorage.getItem('optinova_user');
+        if (savedUser) {
+          try {
+            const parsed = JSON.parse(savedUser);
+            if (parsed?.role === 'ADMIN' || parsed?.role === 'ADMINISTRATOR') return 'admin';
+          } catch (e) {}
+        }
+        return 'admin_login';
+      }
+      return screenFromUrl;
+    }
+
+    const savedUser = localStorage.getItem('optinova_user');
+    const savedToken = localStorage.getItem('optinova_token');
+    if (savedUser && savedToken) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.role === 'ADMIN') return 'admin';
+        return 'hero_showcase';
+      } catch (e) {}
+    }
+    return 'login';
+  });
+
   // Auth state
   const [token, setToken] = useState(() => localStorage.getItem('optinova_token') || '');
   const [currentUser, setCurrentUser] = useState(() => {
@@ -14,204 +70,22 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Cart state
-  const [cartItems, setCartItems] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
-  const [cartTotal, setCartTotal] = useState(0);
-  const [loadingCart, setLoadingCart] = useState(false);
-
-  // Wishlist state
-  const [wishlistItems, setWishlistItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('optinova_wishlist');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('optinova_wishlist', JSON.stringify(wishlistItems));
-    } catch (e) {
-      console.warn('Wishlist write error:', e);
-    }
-  }, [wishlistItems]);
-
-  const isInWishlist = (productId) => {
-    if (!productId) return false;
-    return wishlistItems.some(item => (item.id || item.productId) === productId);
-  };
-
-  const toggleWishlist = (product) => {
-    if (!product) return;
-    const pId = product.id || product.productId;
-    if (isInWishlist(pId)) {
-      setWishlistItems(prev => prev.filter(item => (item.id || item.productId) !== pId));
-      addToast(`Removed "${product.name}" from your wishlist.`, 'info');
-    } else {
-      setWishlistItems(prev => [...prev, product]);
-      addToast(`Added "${product.name}" to your wishlist!`, 'success');
-    }
-  };
-
-  const removeFromWishlist = (productId) => {
-    setWishlistItems(prev => prev.filter(item => (item.id || item.productId) !== productId));
-    addToast('Item removed from wishlist.', 'info');
-  };
-
-  const clearWishlist = () => {
-    setWishlistItems([]);
-    addToast('Wishlist cleared.', 'info');
-  };
-
-  // User Reviews & Rating state
-  const [userReviews, setUserReviews] = useState(() => {
-    try {
-      const saved = localStorage.getItem('optinova_user_reviews');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('optinova_user_reviews', JSON.stringify(userReviews));
-    } catch (e) {
-      console.warn('User reviews write warning:', e);
-    }
-  }, [userReviews]);
-
-  const submitProductReview = (reviewData) => {
-    if (!reviewData || !reviewData.productId) return;
-    setUserReviews(prev => {
-      const filtered = prev.filter(r => !(r.productId === reviewData.productId && r.orderId === reviewData.orderId));
-      return [...filtered, { ...reviewData, createdAt: new Date().toISOString() }];
-    });
-    addToast(`Thank you! Your ${reviewData.rating}-star review for "${reviewData.productName}" has been submitted.`, 'success');
-  };
-
-  const getUserReviewForProduct = (productId, orderId) => {
-    if (!productId) return null;
-    return userReviews.find(r => r.productId === productId && (!orderId || r.orderId === orderId));
-  };
-
-  const getProductReviews = (productId) => {
-    const defaultReviews = [
-      {
-        rating: 5,
-        comment: 'Extremely lightweight and premium optical clarity. Best eyewear purchase!',
-        username: 'Naveen K. (Verified Buyer)',
-        createdAt: '2026-08-01'
-      },
-      {
-        rating: 5,
-        comment: 'Super fast delivery and incredible frame durability. High quality lenses!',
-        username: 'Alex M. (Verified Buyer)',
-        createdAt: '2026-07-28'
-      }
-    ];
-
-    const matchingUserReviews = userReviews
-      .filter(r => (r.productId === productId || String(r.productId) === String(productId)))
-      .map(r => ({
-        rating: r.rating,
-        comment: r.comment,
-        username: `${r.username || 'Customer'} (Verified Buyer)`,
-        createdAt: r.createdAt
-      }));
-
-    return [...matchingUserReviews, ...defaultReviews];
-  };
-
-  // Pending verification flow context
-  const [otpContext, setOtpContext] = useState({
-    mode: 'register', // 'register' or 'forgot_password'
-    target: '',
-    code: '123456',
-    draftData: null
-  });
-  
-  // Toasts
-  const [toasts, setToasts] = useState([]);
-
-  const addToast = (message, type = 'info') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  };
-
-  // Helper navigation
+  // Helper navigation with URL history syncing
   const navigateTo = (screen) => {
     setCurrentScreen(screen);
+    const targetPath = getPathForScreen(screen);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // 1. Fetch Cart from Backend
-  const fetchCart = async (authToken = token) => {
-    const activeToken = authToken || token || localStorage.getItem('optinova_token');
-    if (!activeToken) {
-      setCartItems([]);
-      setCartCount(0);
-      setCartTotal(0);
-      return { count: 0, items: [] };
-    }
-
-    setLoadingCart(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/cart`, {
-        headers: {
-          'Authorization': `Bearer ${activeToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const json = await response.json();
-      if (response.ok && json.success && json.data) {
-        const items = json.data.items || [];
-        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
-        const grandTotal = json.data.grandTotal ?? 0;
-
-        setCartItems(items);
-        setCartCount(totalItems);
-        setCartTotal(grandTotal);
-        return { count: totalItems, items, grandTotal };
-      } else if (response.status === 401) {
-        // Token invalid or expired
-        setToken('');
-        setCurrentUser(null);
-        localStorage.removeItem('optinova_token');
-        localStorage.removeItem('optinova_user');
-        setCartItems([]);
-        setCartCount(0);
-        setCartTotal(0);
-        setCurrentScreen('login');
-      }
-    } catch (err) {
-      console.error('Error fetching cart:', err);
-    } finally {
-      setLoadingCart(false);
-    }
-    return { count: 0, items: [] };
   };
 
   // Synchronize initial URL and browser popstate events
   useEffect(() => {
-    if (window.location.pathname === '/admin') {
-      setCurrentScreen('admin');
-    } else {
-      setCurrentScreen('login');
-    }
-
     const handlePopState = () => {
-      if (window.location.pathname === '/admin') {
-        setCurrentScreen('admin');
-      } else {
-        const savedUser = localStorage.getItem('optinova_user');
-        setCurrentScreen(savedUser ? 'dashboard' : 'login');
+      const screen = getScreenForPath(window.location.pathname);
+      if (screen) {
+        setCurrentScreen(screen);
       }
     };
 
@@ -280,7 +154,7 @@ export const AuthProvider = ({ children }) => {
         if (detectedRole === 'ADMIN') {
           navigateTo('admin');
         } else {
-          navigateTo('dashboard');
+          navigateTo('hero_showcase');
         }
         return { success: true };
       } else {
@@ -314,7 +188,7 @@ export const AuthProvider = ({ children }) => {
       if (isAdminLogin) {
         navigateTo('admin');
       } else {
-        navigateTo('dashboard');
+        navigateTo('hero_showcase');
       }
       return { success: true };
     }

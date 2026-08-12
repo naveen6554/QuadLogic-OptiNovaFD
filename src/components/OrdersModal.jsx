@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, X, Glasses, CheckCircle2, Calendar, Star, ThumbsUp, MessageSquare, Download, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { handleDirectPdfDownload } from '../utils/downloadInvoice';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const OrdersModal = ({ isOpen, onClose }) => {
   const { token, currentUser, submitProductReview, getUserReviewForProduct, addToast } = useAuth();
@@ -31,7 +32,7 @@ export const OrdersModal = ({ isOpen, onClose }) => {
       let catalogImageMap = {};
       let catalogProductMap = {};
       try {
-        const catalogResp = await fetch('http://localhost:8080/api/v1/products?pageSize=100');
+        const catalogResp = await fetch(`${API_BASE_URL}/api/v1/products?pageSize=100`);
         if (catalogResp.ok) {
           const catData = await catalogResp.json();
           const prods = catData?.data?.content || [];
@@ -62,7 +63,7 @@ export const OrdersModal = ({ isOpen, onClose }) => {
       try {
         if (activeToken && activeToken !== 'mock_jwt_token') {
           // 1. Fetch from GET /api/orders
-          const response = await fetch('http://localhost:8080/api/orders', {
+          const response = await fetch(`${API_BASE_URL}/api/orders`, {
             headers: {
               'Authorization': `Bearer ${activeToken}`,
               'Content-Type': 'application/json'
@@ -109,7 +110,7 @@ export const OrdersModal = ({ isOpen, onClose }) => {
           }
 
           // 2. Also fetch from GET /api/v1/orders/my-orders for detailed order items
-          const fallbackResp = await fetch('http://localhost:8080/api/v1/orders/my-orders', {
+          const fallbackResp = await fetch(`${API_BASE_URL}/api/v1/orders/my-orders`, {
             headers: {
               'Authorization': `Bearer ${activeToken}`,
               'Content-Type': 'application/json'

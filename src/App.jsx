@@ -17,6 +17,9 @@ import { VirtualTryOnModal } from './components/VirtualTryOnModal';
 import { CartModal } from './components/CartModal';
 import { OrdersModal } from './components/OrdersModal';
 import { WishlistModal } from './components/WishlistModal';
+import { CustomerHeroShowcaseScreen } from './components/CustomerHeroShowcaseScreen';
+
+import { AdminSecurityGate } from './components/admin/AdminSecurityGate';
 
 const AppContent = () => {
   const { currentScreen, navigateTo, currentUser, logoutUser, toasts, cartCount, wishlistCount } = useAuth();
@@ -35,10 +38,10 @@ const AppContent = () => {
       <div className="ambient-orb ambient-orb-1"></div>
       <div className="ambient-orb ambient-orb-2"></div>
 
-      {/* Top Header (Shown on store screens, hidden on Splash & Admin Panel) */}
-      {currentScreen !== 'splash' && currentScreen !== 'admin' && (
+      {/* Top Header (Shown on store screens, hidden on Splash, Admin Panel & Admin Login) */}
+      {currentScreen !== 'splash' && currentScreen !== 'admin' && currentScreen !== 'admin_login' && (
         <header className="brand-header">
-          <div className="header-logo-container" onClick={() => navigateTo(currentUser ? 'dashboard' : 'login')}>
+          <div className="header-logo-container" onClick={() => navigateTo(currentUser ? 'hero_showcase' : 'login')}>
             <div className="brand-icon-box">
               <Glasses size={24} />
             </div>
@@ -49,11 +52,51 @@ const AppContent = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            {/* Navigation tabs for Showcase vs Catalog */}
+            {currentUser && !isAdmin && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginRight: '0.5rem' }}>
+                <button
+                  onClick={() => navigateTo('hero_showcase')}
+                  style={{
+                    padding: '0.45rem 0.9rem',
+                    borderRadius: '999px',
+                    border: '1px solid',
+                    borderColor: currentScreen === 'hero_showcase' ? '#D4AF37' : 'rgba(255,255,255,0.15)',
+                    background: currentScreen === 'hero_showcase' ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
+                    color: currentScreen === 'hero_showcase' ? '#D4AF37' : '#94A3B8',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => navigateTo('dashboard')}
+                  style={{
+                    padding: '0.45rem 0.9rem',
+                    borderRadius: '999px',
+                    border: '1px solid',
+                    borderColor: currentScreen === 'dashboard' ? '#D4AF37' : 'rgba(255,255,255,0.15)',
+                    background: currentScreen === 'dashboard' ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
+                    color: currentScreen === 'dashboard' ? '#D4AF37' : '#94A3B8',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Shop
+                </button>
+              </div>
+            )}
+
             {/* Navigation links for Dashboard or Admin Panel */}
-            {(currentScreen === 'dashboard' || currentScreen === 'admin') && (
+            {(currentScreen === 'dashboard' || currentScreen === 'hero_showcase' || currentScreen === 'admin') && (
               <>
                 {/* 1. Header Wishlist Button beside Cart */}
-                {currentScreen === 'dashboard' && (
+                {(currentScreen === 'dashboard' || currentScreen === 'hero_showcase') && (
                   <button 
                     className="header-cart-btn" 
                     onClick={() => setIsWishlistOpen(true)}
@@ -68,7 +111,7 @@ const AppContent = () => {
                 )}
 
                 {/* 2. Header Shopping Cart Button with Dynamic Badge */}
-                {currentScreen === 'dashboard' && (
+                {(currentScreen === 'dashboard' || currentScreen === 'hero_showcase') && (
                   <button 
                     className="header-cart-btn" 
                     onClick={() => setIsCartOpen(true)}
@@ -252,11 +295,13 @@ const AppContent = () => {
         {currentScreen === 'splash' && <SplashScreen />}
         {currentScreen === 'welcome' && <WelcomeScreen />}
         {currentScreen === 'login' && <LoginScreen />}
+        {currentScreen === 'admin_login' && <AdminSecurityGate onLoginSuccess={() => navigateTo('admin')} onBackToStore={() => navigateTo('login')} />}
         {currentScreen === 'register' && <RegistrationScreen onOpenTerms={() => setIsTermsOpen(true)} />}
         {currentScreen === 'otp' && <OTPVerificationScreen />}
         {currentScreen === 'forgot_password' && <ForgotPasswordScreen />}
         {currentScreen === 'reset_password' && <ResetPasswordScreen />}
         {currentScreen === 'reg_success' && <RegSuccessScreen />}
+        {currentScreen === 'hero_showcase' && <CustomerHeroShowcaseScreen onOpenVirtualTryOn={() => setIsTryOnOpen(true)} />}
         {currentScreen === 'dashboard' && <StoreDashboard onOpenVirtualTryOn={() => setIsTryOnOpen(true)} />}
         {currentScreen === 'admin' && <AdminDashboard />}
       </main>

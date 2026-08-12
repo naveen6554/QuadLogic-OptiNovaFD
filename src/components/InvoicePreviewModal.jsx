@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { X, Printer, Download, Glasses, FileText, CheckCircle2, AlertTriangle, ShieldCheck, MapPin, CreditCard } from 'lucide-react';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const InvoicePreviewModal = ({ isOpen, onClose, order, isAdmin = false, onToast }) => {
   const printRef = useRef(null);
@@ -29,7 +30,7 @@ export const InvoicePreviewModal = ({ isOpen, onClose, order, isAdmin = false, o
     try {
       if (onToast) onToast(`Generating PDF invoice ${filename}...`, 'info');
 
-      const response = await fetch(`http://localhost:8080/api/v1/orders/${orderIdToFetch}/invoice`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderIdToFetch}/invoice`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

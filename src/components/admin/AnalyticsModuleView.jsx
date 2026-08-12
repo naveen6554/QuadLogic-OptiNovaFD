@@ -8,6 +8,7 @@ import {
   Eye, FileSpreadsheet, Package, Users, ShoppingBag, Percent, Receipt
 } from 'lucide-react';
 import { exportAnalyticsCSV, exportAnalyticsExcel, downloadAllInvoicesPDF } from '../../utils/analyticsExport';
+import { API_BASE_URL } from '../../config/apiConfig';
 import { downloadInvoicePdf } from '../../utils/downloadInvoice';
 
 export const AnalyticsModuleView = ({ revenueData, onOpenReportModal, token }) => {
@@ -69,9 +70,9 @@ export const AnalyticsModuleView = ({ revenueData, onOpenReportModal, token }) =
     setError(null);
 
     try {
-      let endpoint = `http://localhost:8080/api/admin/analytics/${period}`;
+      let endpoint = `${API_BASE_URL}/api/admin/analytics/${period}`;
       if (period === 'custom') {
-        endpoint = `http://localhost:8080/api/admin/analytics/custom?startDate=${customStart}&endDate=${customEnd}`;
+        endpoint = `${API_BASE_URL}/api/admin/analytics/custom?startDate=${customStart}&endDate=${customEnd}`;
       }
 
       const headers = { 'Content-Type': 'application/json' };

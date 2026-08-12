@@ -5,6 +5,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ProductDetailsModal } from './ProductDetailsModal';
 import { API_BASE_URL } from '../config/apiConfig';
+import heroBannerImg from '../assets/customer_hero_banner.jpg';
 
 export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   const { currentUser, addToast, addToCart, isInWishlist, toggleWishlist } = useAuth();
@@ -23,6 +24,13 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+
+  const scrollToCatalog = () => {
+    const catalogEl = document.getElementById('catalog-section');
+    if (catalogEl) {
+      catalogEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   // 1. Fetch categories on mount
   useEffect(() => {
@@ -48,46 +56,41 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      setError(null);
       try {
-        let url = '';
-        const paginationParams = `pageNo=${pageNo}&pageSize=${pageSize}&sortBy=productId&sortDir=asc`;
+        let url = `${API_BASE_URL}/api/v1/products?page=${pageNo}&size=${pageSize}`;
 
-        if (searchQuery.trim()) {
-          url = `${API_BASE_URL}/api/v1/products/search?keyword=${encodeURIComponent(searchQuery.trim())}&${paginationParams}`;
-        } else if (activeCategory.id !== null) {
-          url = `${API_BASE_URL}/api/v1/products/category/${activeCategory.id}?${paginationParams}`;
-        } else {
-          url = `${API_BASE_URL}/api/v1/products?${paginationParams}`;
+        if (activeCategory.id) {
+          url = `${API_BASE_URL}/api/v1/products/category/${activeCategory.id}?page=${pageNo}&size=${pageSize}`;
+        }
+
+        if (searchQuery.trim() !== '') {
+          url = `${API_BASE_URL}/api/v1/products/search?name=${encodeURIComponent(searchQuery.trim())}&page=${pageNo}&size=${pageSize}`;
         }
 
         const response = await fetch(url);
         const data = await response.json();
 
-        if (data.success && data.data) {
-          setProducts(data.data.content || []);
-          setTotalPages(data.data.totalPages || 0);
-          setTotalElements(data.data.totalElements || 0);
+        if (data.success) {
+          setProducts(data.data?.content || []);
+          setTotalPages(data.data?.totalPages || 0);
+          setTotalElements(data.data?.totalElements || 0);
+          setError(null);
         } else {
           setError(data.message || 'Failed to fetch products');
         }
       } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('Unable to connect to product server');
+        console.error('Error loading products:', err);
+        setError('Unable to connect to server. Please check backend status.');
       } finally {
         setLoading(false);
       }
     };
 
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
+    fetchProducts();
+  }, [pageNo, pageSize, activeCategory, searchQuery]);
 
-    return () => clearTimeout(timer);
-  }, [activeCategory, searchQuery, pageNo, pageSize]);
-
-  const handleCategorySelect = (cat) => {
-    setActiveCategory(cat);
+  const handleCategorySelect = (category) => {
+    setActiveCategory(category);
     setPageNo(0);
   };
 
@@ -121,38 +124,53 @@ export const StoreDashboard = ({ onOpenVirtualTryOn }) => {
 
   return (
     <div className="dashboard-container">
-      {/* Top Hero Banner */}
-      <div className="dashboard-hero">
-        <div className="dashboard-hero-content">
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#D4AF37', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-            <Sparkles size={16} />
-            <span>EXCLUSIVE MEMBER CATALOG ({totalElements} Products Available)</span>
+      {/* Top Shop Catalog Header Banner */}
+      <div 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'linear-gradient(135deg, rgba(15, 20, 32, 0.9) 0%, rgba(8, 11, 18, 0.95) 100%)',
+          borderRadius: '20px',
+          border: '1px solid rgba(212, 175, 55, 0.25)',
+          padding: '1.75rem 2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}
+      >
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#D4AF37', fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+            <Sparkles size={14} />
+            <span>EXCLUSIVE MEMBER COLLECTION ({totalElements} Products Available)</span>
           </div>
-
-          <h1 className="dashboard-hero-title">
-            Welcome, {currentUser?.firstName || 'Member'}
-          </h1>
-          <p className="dashboard-hero-desc">
-            Discover German engineered precision optics, handcrafted Japanese titanium, and custom anti-reflection coatings.
-          </p>
-
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button className="btn-primary" style={{ width: 'auto', padding: '0.75rem 1.5rem' }} onClick={onOpenVirtualTryOn}>
-              <Camera size={18} />
-              3D Virtual Try-On
-            </button>
-          </div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+            Eyewear Store & Collection
+          </h2>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="brand-icon-box" style={{ width: 120, height: 120, borderRadius: 24 }}>
-            <Glasses size={64} />
-          </div>
-        </div>
+        <button 
+          className="btn-primary" 
+          style={{ 
+            width: 'auto', 
+            padding: '0.75rem 1.5rem', 
+            fontSize: '0.92rem',
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            borderRadius: '10px'
+          }} 
+          onClick={onOpenVirtualTryOn}
+        >
+          <Camera size={18} />
+          <span>3D Virtual Try-On</span>
+        </button>
       </div>
 
       {/* Categories & Search Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      <div id="catalog-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div className="category-tabs" style={{ marginBottom: 0 }}>
           {categories.map((cat) => (
             <button
