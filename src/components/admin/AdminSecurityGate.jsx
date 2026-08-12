@@ -64,6 +64,53 @@ export const AdminSecurityGate = ({ onLoginSuccess, onBackToStore }) => {
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 30px rgba(59, 130, 246, 0.15)',
         textAlign: 'center'
       }}>
+        {/* Login Mode Switcher Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.35rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <button
+            type="button"
+            onClick={onBackToStore}
+            style={{
+              flex: 1,
+              padding: '0.55rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'transparent',
+              color: '#94A3B8',
+              fontWeight: 600,
+              fontSize: '0.86rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <User size={15} />
+            <span>Customer Login</span>
+          </button>
+          <button
+            type="button"
+            style={{
+              flex: 1,
+              padding: '0.55rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#3B82F6',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.86rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <Shield size={15} />
+            <span>Admin Login</span>
+          </button>
+        </div>
+
         <div style={{
           width: '64px',
           height: '64px',

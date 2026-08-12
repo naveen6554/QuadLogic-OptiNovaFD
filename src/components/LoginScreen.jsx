@@ -54,6 +54,54 @@ export const LoginScreen = () => {
         </button>
       </div>
 
+      {/* Login Mode Switcher Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.35rem', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <button
+          type="button"
+          onClick={() => navigateTo('login')}
+          style={{
+            flex: 1,
+            padding: '0.55rem 1rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #EAB308 0%, #D4AF37 100%)',
+            color: '#0F172A',
+            fontWeight: 800,
+            fontSize: '0.86rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <User size={15} />
+          <span>Customer Login</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateTo('admin_login')}
+          style={{
+            flex: 1,
+            padding: '0.55rem 1rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'transparent',
+            color: '#94A3B8',
+            fontWeight: 600,
+            fontSize: '0.86rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <Shield size={15} color="#3B82F6" />
+          <span>Admin Login</span>
+        </button>
+      </div>
+
       <div className="form-header">
         <h2 className="form-title">Welcome Back</h2>
         <p className="form-subtitle">Please enter your credentials to login</p>
