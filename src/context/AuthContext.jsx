@@ -76,6 +76,13 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // OTP state context
+  const [otpContext, setOtpContext] = useState({
+    target: '',
+    code: '123456',
+    mode: 'register'
+  });
+
   // Cart state
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
