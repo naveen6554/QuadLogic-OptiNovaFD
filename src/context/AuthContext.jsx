@@ -83,6 +83,17 @@ export const AuthProvider = ({ children }) => {
     mode: 'register'
   });
 
+  // Toast notifications state
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...(prev || []), { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => (prev || []).filter(t => t.id !== id));
+    }, 4000);
+  };
+
   // Cart state
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
