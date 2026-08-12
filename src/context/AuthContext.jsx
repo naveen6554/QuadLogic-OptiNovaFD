@@ -35,31 +35,37 @@ export const AuthProvider = ({ children }) => {
 
   // Navigation Screens: 'splash', 'welcome', 'login', 'register', 'otp', 'forgot_password', 'reset_password', 'reg_success', 'hero_showcase', 'dashboard', 'admin', 'admin_login'
   const [currentScreen, setCurrentScreen] = useState(() => {
-    const screenFromUrl = getScreenForPath(window.location.pathname);
-    if (screenFromUrl) {
-      if (screenFromUrl === 'admin_login') return 'admin_login';
-      if (screenFromUrl === 'admin') {
-        const savedUser = localStorage.getItem('optinova_user');
-        if (savedUser) {
-          try {
-            const parsed = JSON.parse(savedUser);
-            if (parsed?.role === 'ADMIN' || parsed?.role === 'ADMINISTRATOR') return 'admin';
-          } catch (e) {}
-        }
-        return 'admin_login';
-      }
-      return screenFromUrl;
-    }
-
     const savedUser = localStorage.getItem('optinova_user');
     const savedToken = localStorage.getItem('optinova_token');
+    let parsedUser = null;
     if (savedUser && savedToken) {
       try {
-        const parsed = JSON.parse(savedUser);
-        if (parsed?.role === 'ADMIN') return 'admin';
-        return 'hero_showcase';
+        parsedUser = JSON.parse(savedUser);
       } catch (e) {}
     }
+
+    const screenFromUrl = getScreenForPath(window.location.pathname);
+
+    // If user is authenticated:
+    if (parsedUser && savedToken) {
+      if (parsedUser.role === 'ADMIN' || parsedUser.role === 'ADMINISTRATOR') {
+        return 'admin';
+      }
+      if (screenFromUrl === 'dashboard') return 'dashboard';
+      if (screenFromUrl === 'hero_showcase') return 'hero_showcase';
+      return 'hero_showcase';
+    }
+
+    // If user is NOT authenticated:
+    if (screenFromUrl === 'admin' || screenFromUrl === 'admin_login') {
+      return 'admin_login';
+    }
+    if (screenFromUrl === 'register') return 'register';
+    if (screenFromUrl === 'otp') return 'otp';
+    if (screenFromUrl === 'forgot_password') return 'forgot_password';
+    if (screenFromUrl === 'reset_password') return 'reset_password';
+    if (screenFromUrl === 'welcome') return 'welcome';
+
     return 'login';
   });
 
