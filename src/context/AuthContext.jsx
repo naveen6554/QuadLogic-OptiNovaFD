@@ -76,6 +76,59 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Cart state
+  const [cartItems, setCartItems] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [loadingCart, setLoadingCart] = useState(false);
+
+  // Fetch Cart from Backend API
+  const fetchCart = async (authToken = token) => {
+    const activeToken = authToken || token || localStorage.getItem('optinova_token');
+    if (!activeToken) {
+      setCartItems([]);
+      setCartCount(0);
+      setCartTotal(0);
+      return { count: 0, items: [] };
+    }
+
+    setLoadingCart(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cart`, {
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await response.json();
+      if (response.ok && json.success && json.data) {
+        const items = json.data.items || [];
+        const totalItems = json.data.totalItems ?? items.reduce((acc, item) => acc + item.quantity, 0);
+        const grandTotal = json.data.grandTotal ?? 0;
+
+        setCartItems(items);
+        setCartCount(totalItems);
+        setCartTotal(grandTotal);
+        return { count: totalItems, items, grandTotal };
+      } else if (response.status === 401) {
+        setToken('');
+        setCurrentUser(null);
+        localStorage.removeItem('optinova_token');
+        localStorage.removeItem('optinova_user');
+        setCartItems([]);
+        setCartCount(0);
+        setCartTotal(0);
+        setCurrentScreen('login');
+      }
+    } catch (err) {
+      console.error('Error fetching cart:', err);
+    } finally {
+      setLoadingCart(false);
+    }
+    return { count: 0, items: [] };
+  };
+
   // Helper navigation with URL history syncing
   const navigateTo = (screen) => {
     setCurrentScreen(screen);
