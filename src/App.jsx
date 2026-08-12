@@ -290,11 +290,11 @@ const AppContent = () => {
         </header>
       )}
 
-      {/* Screen Content Wrapper */}
+      {/* Screen Content Wrapper with Fallback */}
       <main className="screen-wrapper">
         {currentScreen === 'splash' && <SplashScreen />}
         {currentScreen === 'welcome' && <WelcomeScreen />}
-        {currentScreen === 'login' && <LoginScreen />}
+        {(currentScreen === 'login' || !currentScreen || (currentScreen !== 'splash' && currentScreen !== 'welcome' && currentScreen !== 'admin_login' && currentScreen !== 'register' && currentScreen !== 'otp' && currentScreen !== 'forgot_password' && currentScreen !== 'reset_password' && currentScreen !== 'reg_success' && currentScreen !== 'hero_showcase' && currentScreen !== 'dashboard' && currentScreen !== 'admin')) && <LoginScreen />}
         {currentScreen === 'admin_login' && <AdminSecurityGate onLoginSuccess={() => navigateTo('admin')} onBackToStore={() => navigateTo('login')} />}
         {currentScreen === 'register' && <RegistrationScreen onOpenTerms={() => setIsTermsOpen(true)} />}
         {currentScreen === 'otp' && <OTPVerificationScreen />}
@@ -328,10 +328,83 @@ const AppContent = () => {
   );
 };
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('App ErrorBoundary caught error:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          backgroundColor: '#0B0F19',
+          color: '#FFFFFF',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.88)',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            borderRadius: '20px',
+            padding: '2.5rem',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.7)'
+          }}>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D4AF37', margin: '0 0 1rem 0' }}>
+              OptiNova Session Refresh
+            </h2>
+            <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
+              Session updated. Click below to reload your OptiNova store.
+            </p>
+            <button
+              onClick={() => {
+                localStorage.removeItem('optinova_token');
+                localStorage.removeItem('optinova_user');
+                window.location.href = '/login';
+              }}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1.8rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #EAB308 0%, #D4AF37 100%)',
+                color: '#0F172A',
+                fontWeight: 800,
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              Reload OptiNova Store
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
