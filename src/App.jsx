@@ -331,11 +331,11 @@ const AppContent = () => {
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, info) {
@@ -361,20 +361,27 @@ class ErrorBoundary extends React.Component {
             border: '1px solid rgba(212, 175, 55, 0.3)',
             borderRadius: '20px',
             padding: '2.5rem',
-            maxWidth: '460px',
+            maxWidth: '520px',
             width: '100%',
             boxShadow: '0 25px 50px rgba(0,0,0,0.7)'
           }}>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#D4AF37', margin: '0 0 1rem 0' }}>
               OptiNova Session Refresh
             </h2>
-            <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
-              Session updated. Click below to reload your OptiNova store.
+            <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginBottom: '1rem', lineHeight: '1.6' }}>
+              Session updated. Click below to clear cache and reload your OptiNova store.
             </p>
+            {this.state.error && (
+              <div style={{ color: '#FB7185', fontSize: '0.78rem', background: 'rgba(251, 113, 133, 0.1)', padding: '0.6rem', borderRadius: '8px', marginBottom: '1.25rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {String(this.state.error.message || this.state.error)}
+              </div>
+            )}
             <button
               onClick={() => {
-                localStorage.removeItem('optinova_token');
-                localStorage.removeItem('optinova_user');
+                try {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                } catch (e) {}
                 window.location.href = '/login';
               }}
               style={{
@@ -389,7 +396,7 @@ class ErrorBoundary extends React.Component {
                 cursor: 'pointer'
               }}
             >
-              Reload OptiNova Store
+              Reset Session & Reload Store
             </button>
           </div>
         </div>
