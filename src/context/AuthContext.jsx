@@ -635,15 +635,13 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok || response.status === 201) {
         saveRegisteredUser(formData);
-        const rawMsg = data.message || `Verification OTP code sent to ${formData.email}`;
-        const cleanMsg = rawMsg.replace(/\s*\(Code:\s*\d+\)/gi, '');
         setOtpContext({
           mode: 'register',
           target: formData.email,
-          code: data.data || '',
+          code: '',
           draftData: formData
         });
-        addToast(cleanMsg, 'success');
+        addToast(`Verification OTP code sent to ${formData.email}. Please check your email inbox.`, 'success');
         navigateTo('otp');
       } else {
         if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
