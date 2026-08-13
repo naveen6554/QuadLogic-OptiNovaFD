@@ -87,8 +87,11 @@ export const AuthProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = (message, type = 'info') => {
+    const cleanMessage = typeof message === 'string' 
+      ? message.replace(/\s*\(Code:\s*\d+\)/gi, '') 
+      : message;
     const id = Date.now() + Math.random();
-    setToasts(prev => [...(prev || []), { id, message, type }]);
+    setToasts(prev => [...(prev || []), { id, message: cleanMessage, type }]);
     setTimeout(() => {
       setToasts(prev => (prev || []).filter(t => t.id !== id));
     }, 4000);
