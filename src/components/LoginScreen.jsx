@@ -36,8 +36,8 @@ export const LoginScreen = () => {
 
   const handleQuickFillDemo = () => {
     setFormData({
-      username: 'Nani10',
-      password: 'OptiPassword123'
+      username: 'Naveen10',
+      password: 'Naveen@123'
     });
     setErrors({});
   };
