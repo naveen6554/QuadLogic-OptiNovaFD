@@ -449,6 +449,8 @@ export const AdminDashboard = () => {
   const fetchUsers = async () => {
     setLoadingUsers(true);
     const activeToken = token || localStorage.getItem('optinova_token');
+    const localUsers = JSON.parse(localStorage.getItem('optinova_registered_users') || '[]');
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: { 
@@ -459,22 +461,47 @@ export const AdminDashboard = () => {
 
       if (res.ok) {
         const json = await res.json();
-        const userList = json.data || (Array.isArray(json) ? json : []);
-        setUsersList(Array.isArray(userList) ? userList : []);
+        const apiUsers = json.data || (Array.isArray(json) ? json : []);
+        
+        const combined = [...apiUsers];
+        for (const lu of localUsers) {
+          const exists = combined.some(u => 
+            (u.email && lu.email && u.email.toLowerCase() === lu.email.toLowerCase()) ||
+            (u.username && lu.username && u.username.toLowerCase() === lu.username.toLowerCase())
+          );
+          if (!exists) {
+            combined.push(lu);
+          }
+        }
+        setUsersList(combined);
       } else {
-        setUsersList([
+        const defaultMocks = [
           { userId: 1, username: 'optiadmin', email: 'optiadmin@optinova.com', role: 'ADMIN', createdAt: '2026-01-15' },
-          { userId: 2, username: 'alex_member', email: 'alex@optinova.com', role: 'CUSTOMER', createdAt: '2026-02-10' },
-          { userId: 3, username: 'sarah_vision', email: 'sarah@example.com', role: 'CUSTOMER', createdAt: '2026-03-01' }
-        ]);
+          { userId: 2, username: 'Nani10', email: 'nani10@optinova.com', role: 'CUSTOMER', createdAt: '2026-02-10' },
+          { userId: 3, username: 'Naveen10', email: 'naveenk8815@gmail.com', role: 'CUSTOMER', createdAt: '2026-03-01' }
+        ];
+        const combined = [...localUsers];
+        for (const dm of defaultMocks) {
+          if (!combined.some(u => u.username?.toLowerCase() === dm.username.toLowerCase())) {
+            combined.push(dm);
+          }
+        }
+        setUsersList(combined);
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setUsersList([
+      const defaultMocks = [
         { userId: 1, username: 'optiadmin', email: 'optiadmin@optinova.com', role: 'ADMIN', createdAt: '2026-01-15' },
-        { userId: 2, username: 'alex_member', email: 'alex@optinova.com', role: 'CUSTOMER', createdAt: '2026-02-10' },
-        { userId: 3, username: 'sarah_vision', email: 'sarah@example.com', role: 'CUSTOMER', createdAt: '2026-03-01' }
-      ]);
+        { userId: 2, username: 'Nani10', email: 'nani10@optinova.com', role: 'CUSTOMER', createdAt: '2026-02-10' },
+        { userId: 3, username: 'Naveen10', email: 'naveenk8815@gmail.com', role: 'CUSTOMER', createdAt: '2026-03-01' }
+      ];
+      const combined = [...localUsers];
+      for (const dm of defaultMocks) {
+        if (!combined.some(u => u.username?.toLowerCase() === dm.username.toLowerCase())) {
+          combined.push(dm);
+        }
+      }
+      setUsersList(combined);
     } finally {
       setLoadingUsers(false);
     }
