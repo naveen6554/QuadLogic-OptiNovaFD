@@ -635,14 +635,15 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok || response.status === 201) {
         saveRegisteredUser(formData);
-        const msg = data.message || `Verification OTP code sent to ${formData.email}`;
+        const rawMsg = data.message || `Verification OTP code sent to ${formData.email}`;
+        const cleanMsg = rawMsg.replace(/\s*\(Code:\s*\d+\)/gi, '');
         setOtpContext({
           mode: 'register',
           target: formData.email,
           code: data.data || '',
           draftData: formData
         });
-        addToast(msg, 'success');
+        addToast(cleanMsg, 'success');
         navigateTo('otp');
       } else {
         if (data.validationErrors && Object.keys(data.validationErrors).length > 0) {
@@ -659,10 +660,10 @@ export const AuthProvider = ({ children }) => {
       setOtpContext({
         mode: 'register',
         target: formData.email || formData.mobile,
-        code: '123456',
+        code: '',
         draftData: formData
       });
-      addToast(`OTP code sent to ${formData.email || formData.mobile}`, 'info');
+      addToast(`Verification OTP code sent to ${formData.email || formData.mobile}. Please check your email inbox.`, 'info');
       navigateTo('otp');
     }
   };
@@ -677,22 +678,24 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
+      const rawMsg = data.message || `Password recovery OTP sent to ${emailOrUser}`;
+      const cleanMsg = rawMsg.replace(/\s*\(Code:\s*\d+\)/gi, '');
+      setOtpContext({
+        mode: 'forgot_password',
+        target: emailOrUser,
+        code: data.data || '',
+        draftData: { emailOrUser }
+      });
+      addToast(cleanMsg, 'info');
+      navigateTo('otp');
+    } catch (err) {
       setOtpContext({
         mode: 'forgot_password',
         target: emailOrUser,
         code: '',
         draftData: { emailOrUser }
       });
-      addToast(data.message || `Password recovery OTP sent to ${emailOrUser}`, 'info');
-      navigateTo('otp');
-    } catch (err) {
-      setOtpContext({
-        mode: 'forgot_password',
-        target: emailOrUser,
-        code: '123456',
-        draftData: { emailOrUser }
-      });
-      addToast(`Password recovery OTP sent to ${emailOrUser}`, 'info');
+      addToast(`Password recovery OTP sent to ${emailOrUser}. Please check your email inbox.`, 'info');
       navigateTo('otp');
     }
   };
@@ -742,17 +745,17 @@ export const AuthProvider = ({ children }) => {
         handleVerifyOtpSuccess();
         return { success: true };
       } else {
-        return { success: false, message: data.message || 'Invalid or expired OTP code.' };
+        return { success: false, message: data.message || 'Invalid or expired OTP code. Please check your email.' };
       }
     } catch (err) {
-      if (enteredOtp === '123456' || enteredOtp === otpContext.code) {
+      if (enteredOtp && (enteredOtp === otpContext.code || (enteredOtp === '123456' && !otpContext.code))) {
         if (otpContext.draftData) {
           saveRegisteredUser(otpContext.draftData);
         }
         handleVerifyOtpSuccess();
         return { success: true };
       }
-      return { success: false, message: 'Invalid OTP code. Please check your email and try again.' };
+      return { success: false, message: 'Invalid OTP code. Please check your email inbox and enter the 6-digit code sent to you.' };
     }
   };
 
